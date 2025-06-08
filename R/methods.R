@@ -11,13 +11,7 @@
 #' @name micsr
 #' @param x,object an object which inherits the `micsr` class
 #' @param formula a formula
-#' @param subset a character which indicates which subset of
-#'     coefficients should be extracted: one of `noinst` (all the
-#'     coefficients except those corresponding to instrumental
-#'     variables), `all`, `covar` (only the coefficients of the
-#'     covariates), `inst` (only the coefficients of the instrumental
-#'     variables) and `misc` (ony the "miscelanous" coefficients,
-#'     typicaly a standard deviation or a coefficient of correlation)
+#' @param subset,grep,fixed,invert invert see `micsr::select_coef
 #' @param vcov the method used to compute the covariance matrix of the
 #'     estimators (only for the ML estimator), one of `hessian` (the
 #'     opposite of the inverse of the hessian), `info` (the inverse of
@@ -29,6 +23,8 @@
 #' @param type,omega,sandwich see `sandwich::sandwich`
 #' @param newdata a new data frame to compute the predictions
 #' @param k see `AIC`
+#' @param sum return either the sum of the contributions or the vector
+#'     of contribution
 #' @param ... further arguments
 #' @return
 #' 
@@ -72,14 +68,17 @@ NULL
 
 # @importFrom Rcpp evalCpp
 
-
-#' @importFrom dplyr mutate
+#' @importFrom survival Surv
 #' @export
-dplyr::mutate
+survival::Surv
 
-#' @importFrom magrittr %>%
-#' @export
-magrittr::`%>%`
+## #' @importFrom dplyr mutate
+## #' @export
+## dplyr::mutate
+
+## #' @importFrom magrittr %>%
+## #' @export
+## magrittr::`%>%`
 
 #' @importFrom generics glance
 #' @export
@@ -111,38 +110,6 @@ llobs <- function(x, ...)
 #' @export
 Formula::model.part
 
-#select_coef <- function(object, which = c("noinst", "all", "covar", "inst", "misc")){ 
-select_coef <- function(object, subset = NA){   
-    # ancillary  : instruments, heteroscedasticity
-    # covariates : 
-    # misc       : standard deviations / coefficients of correlation / cholesky matrix
-    # vcov       : - ancillary
-    # all        : all coefficients
-    .npar <- object$npar
-    if (is.null(.npar) | is.null(attr(.npar, "default"))) idx <- 1:length(object$coefficients)
-    else{
-        if (length(subset) == 1){
-            if (is.na(subset)) .subset = attr(.npar, "default")
-            else{
-                if (subset == "all") .subset <- names(.npar)
-                else{
-                    if (subset %in% names(.npar)) .subset <- subset
-                    else stop("irrelevant subset argument")
-                }
-            }
-        }
-        else{
-            .subset <- subset
-            if (! all(.subset %in% names(.npar))) stop("irrelevant subset")
-        }
-        idx <- data.frame(subset = rep(names(.npar), times = .npar),
-                          idx = 1:sum(.npar))
-        .sel <- .subset
-        idx <- subset(idx, subset %in% .sel)[["idx"]]
-    }
-    idx
-}
-
 pretty_nms <- function(x, subset = NA){
     .subset <- subset
     .cov_subsets <- c("covariates", "heterosc", "instruments")
@@ -156,12 +123,11 @@ pretty_nms <- function(x, subset = NA){
 
 #' @rdname micsr
 #' @export
-coef.micsr <- function(object, ..., subset = NA){
+coef.micsr <- function(object, ..., subset = NA, fixed = FALSE, grep  = NULL, invert = TRUE){
     .subset <- subset
     is.na_subset <- (length(.subset) == 1) && is.na(.subset)
     if (is.na_subset) .subset <- attr(object$npar, "default")
-    .est_method <- object$est_method
-    .sel <- select_coef(object, .subset)
+    .sel <- select_coef(object, .subset, fixed = fixed, grep = grep)
     .coef <- object$coefficients[.sel]
     names(.coef) <- pretty_nms(names(.coef), .subset)
     .coef
@@ -169,40 +135,74 @@ coef.micsr <- function(object, ..., subset = NA){
 
 #' @rdname micsr
 #' @export
-vcov.micsr <- function(object, ..., vcov = c("info", "hessian", "opg"), subset = NA){
+vcov.micsr <- function(object, ..., vcov = NULL,
+                       subset = NA, fixed = FALSE, grep = NULL, invert = TRUE){
+    .vcov_method <- vcov
     .subset <- subset
     is.na_subset <- (length(.subset) == 1) && is.na(.subset)
-    if (is.na_subset) .subset <- attr(object$npar, "default")
+    if (is.na_subset){
+        if (! is.null(attr(object$npar, "default"))){
+            .subset <- attr(object$npar, "default")
+        } else {
+            .subset <- names(object$npar)
+        }
+    }
     .est_method <- object$est_method
     if (.est_method == "ml"){
-        .vcov_method <- match.arg(vcov)
-        if (.vcov_method == "info" & is.null(object$info)) .vcov_method = "hessian"
-        if (.vcov_method == "hessian") .vcov <- solve(- object$hessian)
-        if (.vcov_method == "opg") .vcov <- solve(crossprod(object$gradient))
-        if (.vcov_method == "info") .vcov <- solve(object$info)
+        if (is.null(.vcov_method)){
+            if (! is.null(object$info)){
+                .vcov_method = "hessian"
+            } else {
+                if (! is.null(object$hessian)){
+                    .vcov_method = "hessian"
+                } else {
+                    .vcov_method = "opg"
+                }
+            }
+        } else {
+            if (! .vcov_method %in% c("info", "hessian", "opg")){
+                stop("irrelevant method")
+            }
+        }
+        if (.vcov_method == "info"){
+                if (is.null(object$info)){
+                    stop("no information matrix available")
+                } else {
+                    .vcov <- object$info
+                }
+        }
+        if (.vcov_method == "hessian"){
+            if (is.null(object$hessian)){
+                stop("no hessian matrix available")
+            } else {
+                .vcov <- - object$hessian
+            }
+        }
+        if (.vcov_method == "opg") .vcov <- crossprod(object$gradient)
+    } else {
+        .vcov <- object$vcov
     }
-    else .vcov <- object$vcov
     nms <- rownames(.vcov)
-    .sel <- select_coef(object, subset = .subset)
+    .sel <- select_coef(object, subset = .subset, fixed = fixed, grep = grep)
     nms <- nms[.sel]
     .vcov <- .vcov[.sel, .sel, drop = FALSE]
     colnames(.vcov) <- rownames(.vcov) <- pretty_nms(nms, .subset)
-    .vcov
+    solve(.vcov)
 }
 
 #' @rdname micsr
 #' @export
 summary.micsr <- function(object, ...,
                           vcov = c("hessian", "info", "opg"),
-                          subset = NA){
+                          subset = NA, fixed = FALSE, grep = NULL, invert = TRUE){
     .subset <- subset
     is.na_subset <- (length(.subset) == 1) && is.na(.subset)
     if (is.na_subset) .subset <- attr(object$npar, "default")
     .est_method <- object$est_method
     .vcov_method <- match.arg(vcov)
-    .vcov <- vcov(object, subset = .subset, vcov = .vcov_method)
+    .vcov <- vcov(object, subset = .subset, vcov = .vcov_method, fixed = fixed, grep = grep)
     std.err <- sqrt(diag(.vcov))
-    b <- coef(object, subset = .subset)
+    b <- coef(object, subset = .subset, fixed = fixed, grep = grep)
     z <- b / std.err
     p <- 2 * pnorm(abs(z), lower.tail = FALSE)
     object$coefficients <- cbind(b, std.err, z, p)
@@ -241,6 +241,11 @@ print.summary.micsr <- function (x, digits = max(3, getOption("digits") - 2), wi
         .est_method_lib <- "Maximum likelihood estimation"
         gof_stat <- "log-Likelihood"
     }
+    if (.est_method == "lm"){
+        .est_method_lib <- "Ordinary Least Squares"
+        gof_stat <- NA
+    }
+
     if (.est_method == "twosteps"){
         .est_method_lib <- "Two-steps estimation"
         gof_stat <- "deviance"
@@ -279,21 +284,36 @@ print.summary.micsr <- function (x, digits = max(3, getOption("digits") - 2), wi
 
 #' @rdname micsr
 #' @export
-logLik.micsr <- function(object, ...){
-    if (object$est_method != "ml") NULL
-    else object$value
+logLik.micsr <- function(object, ..., type = c("model", "null", "saturated"), sum = TRUE){
+    .type <- match.arg(type)
+    if (sum){
+        .val <- object$logLik[.type]
+        if (is.na(.val)) stop(paste("the ", .type, " log-likelihood is not available", sep = ""))
+        .nobs <- nobs(object)
+        .df <- switch(.type,
+                      model = npar(object),
+                      null = 1,
+                      saturated = nobs(object))
+        structure(.val, nobs = .nobs, df = .df, class = "logLik")
+    }
+    else object$value[, .type]
 }
 
-logLik.micsr <- function(object, ..., type = c("model", "null", "saturated")){
-    .type <- match.arg(type)
-    .val <- object$logLik[.type]
-    .nobs <- nobs(object)
-    .df <- switch(.type,
-                  model = npar(object),
-                  null = 1,
-                  saturated = nobs(object))
-    structure(.val, nobs = .nobs, df = .df, class = "logLik")
-}
+
+
+## logLik.micsr <- function(object, ..., type = c("model", "null", "saturated")){
+##     .type <- match.arg(type)
+##     .val <- object$logLik[.type]
+##     if (is.na(.val)) stop(paste("the ", .type, " log-likelihood is not available", sep = ""))
+##     .nobs <- nobs(object)
+##     .df <- switch(.type,
+##                   model = npar(object),
+##                   null = 1,
+##                   saturated = nobs(object))
+##     structure(.val, nobs = .nobs, df = .df, class = "logLik")
+## }
+
+
 
 #' @rdname micsr
 #' @export
@@ -331,6 +351,9 @@ deviance.micsr <- function(object, ..., type = c("model", "null")){
                                object$logLik["saturated"]))
     - 2 * (unname(object$logLik[.type]) - logLik_saturated)
 }
+
+
+# !!!!! uniquement pour escount
 
 #' @rdname micsr
 #' @export
@@ -395,9 +418,13 @@ model.part.micsr <- function(object, ..., lhs = 1){
 #' @export
 model.matrix.micsr <- function(object, formula = NULL, ..., rhs = 1){
 #    .formula <- Formula(formula(paste(deparse(object$call$formula), collapse = "")))
-    if (is.null(formula)) .formula <- object$formula
-    else{ .formula <- Formula(formula)
-        .formula <- update(object$formula, formula)
+    ## if (is.null(formula)) .formula <- object$formula
+    ## else{ .formula <- Formula(formula)
+    ##     .formula <- update(object$formula, formula)
+    ## }
+    if (is.null(formula)) .formula <- object$terms
+    else{.formula <- Formula(formula)
+        .formula <- update(object$terms, formula)
     }
     cl <- object$call
     cl$formula <- .formula
@@ -484,6 +511,38 @@ glance.micsr <- function(x, ...){
     result
 }
 
-    
-        
-npar <- function(x) sum(as.numeric(x$npar))
+#' @rdname micsr
+#' @method residuals micsr
+#' @export
+residuals.micsr <- function(object, ..., type = c("deviance", "pearson", "response")){
+    type <- match.arg(type)
+    y <- model.response(model.frame(object))
+    hy <- fitted(object)
+    wt <- model.weights(model.frame(object))
+    if (is.null(wt)) wt <- rep(1, length(y))
+    if (inherits(object, "binomreg")) sd_hy <- sqrt(hy * (1 - hy))
+    if (inherits(object, "poisreg")) sd_hy <- sqrt(hy)
+    if (type == "response") resid <- y - hy
+    if (type == "pearson") resid <- (y - hy) / sd_hy * sqrt(wt)
+    if (type == "deviance"){
+        sgn <- ifelse(y > hy, 1, - 1)
+        resid <- sgn * sqrt(2) * sqrt(wt) * 
+            sqrt(logLik(object, type = "saturated", sum = FALSE) -
+                 logLik(object, type = "model", sum = FALSE))
+    }
+    resid
+}
+
+
+residuals.micsr <- function(object, ..., type = c("deviance", "pearson", "response")){
+    .type <- match.arg(type)
+    y <- model.response(model.frame(object))
+    mu <- fitted(object)
+    wt <- model.weights(model.frame(object))
+    if (is.null(wt)) wt <- rep(1, length(y))
+    if (.type == "response") .resid <- y - mu
+    if (.type == "pearson") .resid <- (y - mu) / sqrt(object$family$variance(mu)) * sqrt(wt)
+    if (.type == "deviance") .resid <- sqrt(2) * ifelse(y > mu, 1, -1) * sqrt(wt) * 
+                                 (object$value[, "saturated"] - object$value[, "model"])  ^ .5
+    .resid
+}

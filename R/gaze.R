@@ -17,9 +17,9 @@
 #' @return returns invisibly its first argument
 #' @keywords misc
 #' @examples
-#' t.test(extra ~ group, sleep) %>% gaze
-#' lm(dist ~ poly(speed, 2), cars) %>% gaze
-#' lm(dist ~ poly(speed, 2), cars) %>% gaze(coef = "poly(speed, 2)2")
+#' t.test(extra ~ group, sleep) |> gaze()
+#' lm(dist ~ poly(speed, 2), cars) |> gaze()
+#' lm(dist ~ poly(speed, 2), cars) |> gaze(coef = "poly(speed, 2)2")
 #' @export
 gaze <- function(x, ...) UseMethod("gaze")
 
@@ -49,11 +49,21 @@ gaze.micsr <- function(x, ..., coef = NULL,
 
 #' @rdname gaze
 #' @export
-gaze.ivreg <- function(x, ..., coef,
-                          digits = max(3L, getOption("digits") - 3L), 
-                          signif.stars = getOption("show.signif.stars")){
+gaze.ivreg <- function(x, ..., coef = NULL,
+                       digits = max(3L, getOption("digits") - 3L),
+                       signif.stars = FALSE){
+#                          signif.stars = getOption("show.signif.stars")){
   gaze.lm(x, ..., coef = coef, digits = digits, signif.stars = signif.stars)
 }
+
+#' @rdname gaze
+#' @export
+gaze.mlogit <- function(x, ..., coef = NULL,
+                       digits = max(3L, getOption("digits") - 3L),
+                       signif.stars = FALSE){
+  gaze.lm(x, ..., coef = coef, digits = digits, signif.stars = signif.stars)
+}
+
 
 #' @rdname gaze
 #' @export
@@ -213,6 +223,25 @@ gaze.anova <- function(x, ..., digits = 3){
 #' @rdname gaze
 #' @export
 gaze.LMtestlist <- function(x, ..., digits = 3){
+    .sprint <- paste("%6.", digits, "f", sep = "")
+    if (length(x) == 1) gaze(x[[1]], ..., digits= digits)
+    else{
+        .name <- unname(sapply(x, function(x) names(x$statistic)))
+        .nchar <- nchar(.name)
+        .nchar <- max(.nchar) - .nchar
+        .blanks <- sapply(.nchar, function(x) paste(rep(" ", x), collapse = ""))
+        .name <- paste(.name, .blanks, sep = "")
+        for (i in 1:length(x)){            
+            cat(.name[i], ": ", sprintf(.sprint, unname(x[[i]]$statistic)), ", df = ",
+                      unname(x[[i]]$parameter), ", p-value = ", sprintf(.sprint, unname(x[[i]]$p.value)), "\n", sep = "")
+        }
+    }
+    invisible(x)
+}
+        
+#' @rdname gaze
+#' @export
+gaze.RStestlist <- function(x, ..., digits = 3){
     .sprint <- paste("%6.", digits, "f", sep = "")
     if (length(x) == 1) gaze(x[[1]], ..., digits= digits)
     else{

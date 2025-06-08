@@ -13,7 +13,7 @@ rsq(x, type)
 \method{rsq}{micsr}(
   x,
   type = c("mcfadden", "cox_snell", "cragg_uhler", "aldrich_nelson", "veall_zimm",
-    "estrella", "cor", "ess", "rss", "tjur", "mckel_zavo", "w", "lm", "lr")
+    "estrella", "cor", "ess", "rss", "tjur", "mckel_zavo", "wald", "score", "lr")
 )
 }
 \arguments{

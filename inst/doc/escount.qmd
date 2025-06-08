@@ -1,14 +1,11 @@
 ---
 title: "Endogenous switching or sample selection models for count data"
-header-includes:
-  - \usepackage{xcolor}
-output: 
-  rmarkdown::html_vignette
-toc: false
+date: today
+date-format: long
 bibliography: ../inst/REFERENCES.bib
 vignette: >
   %\VignetteIndexEntry{Endogenous switching or sample selection models for count data}
-  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEngine{quarto::pdf}
   %\VignetteEncoding{UTF-8}
 ---
 
@@ -60,15 +57,31 @@ deviation equal to $\sigma$. $\epsilon$ and $\nu$ being potentially
 correlated, their joint distribution has to be considered:
 
 $$
-f(\epsilon, \nu ; \sigma, \rho) = 
-\frac{1}{2\pi\sqrt{1 - \rho ^ 2}\sigma}
+\begin{array}{rcl}
+f(\epsilon, \nu ; \sigma, \rho) &=&
+\displaystyle \frac{1}{2\pi\sqrt{1 - \rho ^ 2}\sigma}
 e^{\displaystyle-\frac{1}{2} \frac{\left(\frac{\epsilon}{\sigma}\right) ^ 2 + \nu ^
-2 - 2 \rho \left(\frac{\epsilon}{\sigma}\right)\nu}{1 - \rho ^2}}
-= \frac{1}{\sqrt{2\pi}}\sigma e ^
+2 - 2 \rho \left(\frac{\epsilon}{\sigma}\right)\nu}{1 - \rho ^2}} \\
+&=& \displaystyle \frac{1}{\sqrt{2\pi}}\sigma e ^
 {-\frac{1}{2}\left(\frac{\epsilon}{\sigma}\right) ^ 2}
 \frac{1}{\sqrt{2\pi}\sqrt{1 - \rho ^ 2}}
 e^{-\frac{1}{2}\left(\frac{(\nu - \rho \epsilon / \sigma)}{\sqrt{1 -
 \rho ^ 2}}\right) ^ 2}
+\end{array}
+$$
+
+$$
+\begin{array}{rcl}
+f(\epsilon, \nu ; \sigma, \rho) &=&
+\displaystyle \frac{1}{2\pi\sqrt{1 - \rho ^ 2}\sigma}
+e^{\displaystyle-\frac{1}{2} \frac{\left(\frac{\epsilon}{\sigma}\right) ^ 2 + \nu ^
+2 - 2 \rho \left(\frac{\epsilon}{\sigma}\right)\nu}{1 - \rho ^2}} \\
+&=& \displaystyle \frac{1}{\sqrt{2\pi}}\sigma e ^
+{-\frac{1}{2}\left(\frac{\epsilon}{\sigma}\right) ^ 2}
+\frac{1}{\sqrt{2\pi}\sqrt{1 - \rho ^ 2}}
+e^{-\frac{1}{2}\left(\frac{(\nu - \rho \epsilon / \sigma)}{\sqrt{1 -
+\rho ^ 2}}\right) ^ 2}
+\end{array}
 $$
 
 The second expression classically gives the joint distribution as the
@@ -87,16 +100,18 @@ f(\epsilon, \nu) d\epsilon d\nu
 $$
 
 $$
-P(y_n \mid x_n, z_n = 1) = \int_{-\infty} ^ {+\infty}
+\begin{array}{rcl}
+P(y_n \mid x_n, z_n = 1) &=& \displaystyle \int_{-\infty} ^ {+\infty}
 g(y_n \mid x_n, \epsilon_n, z_n = 1)
-\left(\int_{-\alpha ^ \top z_n} ^ {+ \infty} 
+\left(\int_{-\alpha ^ \top z_n} ^ {+ \infty}
 \frac{1}{\sqrt{2\pi}\sqrt{1 - \rho ^ 2}}
 e^{-\frac{1}{2}\left(\frac{(\nu - \rho \epsilon / \sigma)}{\sqrt{1 -
-\rho ^ 2}}\right) ^ 2} 
-d\nu\right)
-\frac{1}{\sqrt{2\pi}\sigma} e ^
+\rho ^ 2}}\right) ^ 2}
+d\nu\right)\\
+&\times& \displaystyle \frac{1}{\sqrt{2\pi}\sigma} e ^
 {-\frac{1}{2}\left(\frac{\epsilon}{\sigma}\right) ^ 2}
 d\epsilon
+\end{array}
 $$
 
 By symetry of the normal distribution, the term in braquet is: 
@@ -109,15 +124,13 @@ $$
 which is the probability that $z = 1$ for a given value of
 $\epsilon$. The density of $y$ given that $z = 1$ is then:
 
-
-\begin{equation}
+$$
 P(y_n \mid x_n, z_n = 1) = \int_{-\infty} ^ {+\infty} \frac{e ^
 {-\mbox{exp}(\beta ^ \top x_n + \epsilon_n)}e^{y_n(\beta^\top x_n +
 \epsilon_n)}}{y_n!}\Phi\left(\frac{\alpha ^ \top z_n + \rho / \sigma \epsilon}{\sqrt{1 -
 \rho ^ 2}}\right)\frac{1}{\sqrt{2\pi}\sigma} e ^
 {-\frac{1}{2}\left(\frac{\epsilon}{\sigma}\right) ^ 2} d\epsilon
-(\#eq:probyz1)
-\end{equation}
+$$ {#eq-probyz}
 
 By symmetry, it is easily shown that $P(y_n \mid x_n, z_n = 0)$ is
 similar except that $\Phi\left( (\alpha ^ \top z_n + \rho / \sigma
@@ -127,14 +140,13 @@ similar except that $\Phi\left( (\alpha ^ \top z_n + \rho / \sigma
 \sqrt{1 - \rho ^ 2}\right)$, so that a general formulation of the
 distribution of $y$ is, denoting $q = 2 z -1$:
 
-\begin{equation}
-(\#eq:proby)
+$$
 P(y_n \mid x_n) = \int_{-\infty} ^ {+\infty} \frac{e ^
 {-\mbox{exp}(\beta ^ \top x_n + \epsilon_n)}e^{y_n(\beta^\top x_n +
 \epsilon_n)}}{y_n!}\Phi\left(q_n\frac{\alpha ^ \top z_n + \rho / \sigma \epsilon}{\sqrt{1 -
 \rho ^ 2}}\right)\frac{1}{\sqrt{2\pi}\sigma} e ^
 {-\frac{1}{2}\left(\frac{\epsilon}{\sigma}\right) ^ 2} d\epsilon
-\end{equation}
+$$ {#eq-proby}
 
 There is no closed form for this integral but, using the change of
 variable $\eta = \epsilon / \sqrt{2} / \sigma$, we get:
@@ -161,19 +173,19 @@ P(y_n \mid x_n) \approx
 $$
 
 For the exogenous switching model, the contribution of one observation
-to the likelihood is given by \@ref(eq:proby). 
+to the likelihood is given by @eq-proby). 
 
 For the sample selection model, the contribution of one observation to
-the likelihood is given by \@ref(eq:probyz1) if $z_n = 1$. If $z_n =
+the likelihood is given by @eq-probyz if $z_n = 1$. If $z_n =
 0$, $y$ is unobserved and the contribution of such observations to the
 likelihood is the probability that $z_n = 0$, which is:
 
-\begin{equation}
+$$
 P(z_n = 0 \mid x_n) = \int_{-\infty} ^ {+\infty}
 \Phi\left(q_n\frac{\alpha ^ \top z_n + \rho / \sigma \epsilon}{\sqrt{1 -
 \rho ^ 2}}\right)\frac{1}{\sqrt{2\pi}\sigma} e ^
 {-\frac{1}{2}\left(\frac{\epsilon}{\sigma}\right) ^ 2} d\epsilon
-\end{equation}
+$$
 
 
 The ML estimator is computing intensive as the integral has no closed
@@ -209,7 +221,7 @@ y_n - e^{\displaystyle \beta ^ \top x_n + \ln
 ^ \top z_n)}}
 $$
 
-As it is customary for these two-steps estimator, the covariance
+As it is customary for these two-step estimator, the covariance
 matrix of the estimators should take into account the fact that
 $\alpha$ has been estimated in the first step. Moreover, only $\theta
 = \rho \sigma$ is estimated. To retrieve an estimator of $\sigma$,
@@ -223,15 +235,14 @@ the likelihood is maximized with respect with only one parameter.].
 
 
 ```{r }
-library("micsr")
+library(micsr)
 ```
-
 
 The `escount` function estimates the endogenous switching and the
 sample selection model for count data. The first one is obtained by
 setting the `model` argument to `'es'` (the default) and the second
 one to `'ss'`. The estimation method is selected using the `method`
-argument, which can be either `'twosteps'` for the two-steps non-linear
+argument, which can be either `'twostep'` for the two-step non-linear
 least squares model (the default) or `'ML'` for maximum
 likelihood. The model is described by an extended formula (using the
 **Formula** package) of the form:
@@ -293,10 +304,11 @@ We first compute the two-steps NLS estimator. The `model` and `method`
 arguments needn't to be set are the default values are `es` (endogenous
 switching) and `twosteps` (two-steps NLS).
 
-```{r warning = FALSE}
-trips_2s <- escount(trips | car ~ workschl + size + dist + smsa + fulltime + distnod +
-                        realinc + weekend + car | . - car - weekend + adults,
-                    data = trips)
+```{r}
+#| warning: false
+trips_2s <- escount(trips + car ~ workschl + size + dist + smsa + fulltime +
+                        distnod + realinc + weekend + car | . - car -
+                        weekend + adults, data = trips)
 names(trips_2s)
 ```
 
@@ -311,29 +323,33 @@ The print of the summary method returns the usual table of
 coefficients, the value of the objective function (the sum of squares
 residuals) and the estimated values of $\sigma$ and $\rho$:
 
-```{r }
+```{r}
 summary(trips_2s)
 ```
 
-```{r tripsest, warning = FALSE}
-trips_pois <- glm(trips ~ workschl + size + dist + smsa + fulltime + distnod +
-                      realinc + weekend + car, data = trips, family = poisson)
+```{r}
+#| label: tripsest
+#| warning: false
+trips_pois <- glm(trips ~ workschl + size + dist + smsa + fulltime +
+                      distnod + realinc + weekend + car,
+                  data = trips, family = poisson)
 trips_ml <- update(trips_2s, method = "ml")
 ```
 
-The following table presents the results of a Poisson estimation
-and of the endogenous switching model, estimated by the two-steps
-non-linear least squares method and by maximum likelihood.
+<!-- @tbl-tripsres presents the results of a Poisson estimation -->
+<!-- and of the endogenous switching model, estimated by the two-steps -->
+<!-- non-linear least squares method and by maximum likelihood. -->
 
 
-```{r tripsres, warning = FALSE, echo = FALSE}
-if (requireNamespace("modelsummary")){
-    library("modelsummary")
-    msummary(list("Poisson" = trips_pois, "2 steps" = trips_2s, "ML" = trips_ml),
-             label = "tab:tripsres",
-             title = "Estimation results for the trip demand model")
-}
-```
+<!-- ```{r} -->
+<!-- #| label: tbl-tripsres -->
+<!-- #| warning: false -->
+<!-- #| echo: false -->
+<!-- #| tbl-cap: "Estimation results for the trip demand model" -->
+<!-- if (requireNamespace("modelsummary")){ -->
+<!--     modelsummary::msummary(list("Poisson" = trips_pois, "two-step" = trips_2s, "ML" = trips_ml)) -->
+<!-- } -->
+<!-- ``` -->
 
 The coefficient of `car` is equal to 1.413 for the Poisson model,
 which implies that the number of trips increases by $e^{1.413} - 1 =
@@ -354,7 +370,7 @@ on the respondents' answer to the question "Have you ever been told
 by a physician to drink less". The unobserved part of the equation
 indicating the propensity to receive an advice form the physician can
 obviously be correlated with the one of the alcohol consumption
-equation. The data set `drinks` is part of the **micsr
+equation. The data set `drinks` is part of the **micsr**
 package. The covariates are monthly income in thousands of dollars
 (`income`), `age` (a factor with six 10 years categories of age),
 education in years (`educ`), `race` (a factor with levels `white`,
@@ -367,31 +383,41 @@ covariates are used (except of course `advice`) and 10 supplementary
 covariates indicating the insurance coverage and the health status are
 added.
 
-```{r drinksest, warning = FALSE, cache = TRUE}
-kt_pois <- glm(drinks ~ advice + income + age + educ + race + marital + empstatus +
-                   region, data = drinks, family = poisson)
-kt_ml <- escount(drinks | advice ~ advice + income + age + educ + race + marital +
-                     empstatus + region | income + age + educ + race + marital +
-                     empstatus + region + medicare + medicaid + champus + hlthins +
-                     regmed + dri + limits + diabete + hearthcond + stroke,
+```{r}
+#| label: drinksest
+#| warning: false
+#| cache: true
+kt_pois <- glm(drinks ~ advice + income + age + educ + race + marital +
+                   empstatus + region, data = drinks, family = poisson)
+kt_ml <- escount(drinks + advice ~ advice + income + age + educ + race +
+                     marital + empstatus + region | income + age + educ +
+                     race + marital + empstatus + region + medicare +
+                     medicaid + champus + hlthins + regmed + dri + limits +
+                     diabete + hearthcond + stroke,
                  data = drinks, method = "ml")
-kt_2s <- update(kt_ml, method = "twosteps")
+kt_2s <- update(kt_ml, method = "twostep")
 ```
 
 
-The following table presents the results of a Poisson
-estimation and of the endogenous switching model, estimated by the
-two-steps non-linear least squares method and maximum likelihood^[The
-coefficients of `marital`, `empstatus` and `region` are omitted to
-save place.].
+<!-- @tbl-drinkers presents the results of a Poisson -->
+<!-- estimation and of the endogenous switching model, estimated by the -->
+<!-- two-steps non-linear least squares method and maximum likelihood^[The -->
+<!-- coefficients of `marital`, `empstatus` and `region` are omitted to -->
+<!-- save place.]. -->
 
-```{r drinksres, warning = FALSE, eval = TRUE, echo = FALSE}
-msummary(list("Poisson" = kt_pois, "2 steps" = kt_2s, "ML" = kt_ml),
-         gof_omit = "AIC|BIC|Log.Lik.",
-         label = "tab:drinksres",
-         coef_omit = "region|marital|empstatus|age",
-         title = "Poisson and endogenous switching models for alcohol demand")
-```
+<!-- ```{r} -->
+<!-- #| label: tbl-drinkers -->
+<!-- #| warning: false -->
+<!-- #| echo: false -->
+<!-- #| tbl-cap:  "Poisson and endogenous switching models for alcohol demand" -->
+<!-- if (requireNamespace("modelsummary")){ -->
+<!--     modelsummary::msummary(list("Poisson" = kt_pois, "two-step" = kt_2s, "ML" = kt_ml), -->
+<!--                            gof_omit = "AIC|BIC|Log.Lik.", -->
+<!--                            coef_omit = "region|marital|empstatus|age") -->
+<!-- } -->
+<!-- ``` -->
+
+
 
 The coefficient of `advice` in the alcohol demand equation is positive
 in the Poisson model, which would imply that a positive effect of

@@ -1,17 +1,13 @@
 ---
 title: "Exponentional conditional mean models with endogeneity"
-header-includes:
-  - \usepackage{xcolor}
-output: 
-  rmarkdown::html_vignette
-toc: false
+date: today
+date-format: long
 bibliography: ../inst/REFERENCES.bib
 vignette: >
   %\VignetteIndexEntry{Exponentional conditional mean models with endogeneity}
-  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEngine{quarto::pdf}
   %\VignetteEncoding{UTF-8}
 ---
-
 
 # The linear conditional mean model
 
@@ -21,7 +17,7 @@ $\mbox{E}(y \mid x) = \beta^\top x$. It implies the following moment
 conditions:
 
 $$
-\mbox{E}\left((y  - \beta^\top )x\right)=0
+\mbox{E}\left(y  - \beta^\top x\right)=0
 $$
 
 which can be estimated on a given sample by:
@@ -48,7 +44,7 @@ The variance of $\sqrt{N} \bar{m}$ is $\Omega = N\mbox{E}\left(
 \epsilon \epsilon ^ \top Z\right)$, which reduce to $\sigma_\epsilon ^
 2 Z^\top Z$ if the errors are iid and, more generaly, can be
 consistently estimated by $\frac{1}{N}\sum_{n=1} ^ N \hat{\epsilon}_n
-^ 2 z_n z_n^\top$ where $\hat{\epsilon}$ being the residuals of a
+^ 2 z_n z_n^\top$ where $\hat{\epsilon}$ are the residuals of a
 consistent estimation.
 
 The IV estimator minimise the quadratic form of the moments with the
@@ -194,56 +190,58 @@ price of a pack of cigarettes `lagprice` and the number of years the
 state's restaurant smoking restrictions had been in place.
 
 The data set is called `cigmales` and is lazy loaded while attaching
-the **ivexpcm** package.
+the **micsr** package.
 
 The starting point is a basic count model, ie a Poisson model with a
 log link:
 
 
-```{r message = FALSE}
-library("micsr")
-library("dplyr")
-cigmales <- cigmales %>%
-    mutate(age2 = age ^ 2, educ2 = educ ^ 2,
+```{r}
+#| message: false
+library(micsr)
+cigmales <- cigmales |>
+    transform(age2 = age ^ 2, educ2 = educ ^ 2,
            age3 = age ^ 3, educ3 = educ ^ 3,
            educage = educ * age)                                 
-pois_cig <- glm(cigarettes ~ habit + price + restaurant + income + age + age2 +
-                    educ + educ2 + famsize + race, data = cigmales,
+pois_cig <- glm(cigarettes ~ habit + price + restaurant + income + age +
+                    age2 + educ + educ2 + famsize + race, data = cigmales,
                 family = quasipoisson)
 ```
 
-The IV and the GMM estimators are provided by the `ivexpcm`
+The IV and the GMM estimators are provided by the `expreg`
 function. Its main argument is a two-part formula, where the first
 part indicates the covariates and the second part the instruments. The
 instrument set can be constructed from the covariate set by indicating
 which series should be omited (the endogenous variables) and which
 series should be added (the external instruments). 
 
-```{r }
+```{r}
 iv_cig <- expreg(cigarettes ~ habit + price + restaurant + income + age + age2 +
                        educ + educ2 + famsize + race | . - habit + age3 + educ3 +
                        educage + lagprice + reslgth, data = cigmales,
-                   twosteps = FALSE)
-gmm_cig <- update(iv_cig, twosteps = TRUE)
+                   method = "iv")
+gmm_cig <- update(iv_cig, method = "gmm")
 ```
-the `twosteps` argument is a logical which default value is `TRUE`
-(the GMM estimator), setting this argument to `FALSE` leads to the IV estimator.
+The method argument unables to estimate either the instrumental
+variables or the general method of moments estimator. The Sargan test gives:
 
+<!-- The results are presented in the @tbl-cig. -->
 
-The results are presented in the following table:
+<!-- ```{r} -->
+<!-- #| label: tbl-cig -->
+<!-- #| tbl-cap: "Cigarette smoking behaviour" -->
+<!-- #| echo: false -->
+<!-- #| message: false -->
+<!-- if (requireNamespace("modelsummary")){ -->
+<!--     modelsummary::msummary(list(ML = pois_cig, IV = iv_cig, GMM = gmm_cig), -->
+<!--                            fmt = 4, statistic = 'statistic', coef_omit = "(Intercept)") -->
+<!-- } -->
+<!-- ``` -->
 
-```{r echo = FALSE}
-if (requireNamespace("modelsummary")){
-    modelsummary::msummary(list(ML = pois_cig, IV = iv_cig, GMM = gmm_cig),
-                           fmt = 4, statistic = 'statistic', coef_omit = "(Intercept)")
-}
+```{r}
+sargan(iv_cig) |> gaze()
+sargan(gmm_cig) |> gaze()
 ```
-
-```{r }
-sargan(gmm_cig)
-```
-
-
 
 # Birth weight
 
@@ -263,25 +261,28 @@ family income `faminc` and the per-pack state excise tax on
 cigarettes.
 
 
-```{r }
+```{r}
 ml_bwt <- glm(birthwt ~ cigarettes + parity + race + sex, data = birthwt,
               family = quasipoisson)
 iv_bwt <- expreg(birthwt ~ cigarettes + parity + race + sex |
-                      . - cigarettes + edmother + edfather + faminc + cigtax,
-                  data = birthwt, method = "iv")
+                     . - cigarettes + edmother + edfather + faminc +
+                     cigtax, data = birthwt, method = "iv")
 gmm_bwt <- update(iv_bwt, method = "gmm")
 ```
 
-The results are presented in the following table:
+<!-- The results are presented in the @tbl-weight. -->
 
-```{r eval = FALSE, echo = FALSE}
-if (requireNamespace("modelsummary")){
-    modelsummary::msummary(list(ML = ml_bwt, IV = iv_bwt, GMM = gmm_bwt),
-                           fmt = 4, statistic = 'statistic', coef_omit = "(Intercept)")
-}
-```
+<!-- ```{r} -->
+<!-- #| label: tbl-weight -->
+<!-- #| tbl-cap: "Birth weight and smoking" -->
+<!-- #| eval: false -->
+<!-- #| echo: false -->
+<!-- if (requireNamespace("modelsummary")){ -->
+<!--     modelsummary::msummary(list(ML = ml_bwt, IV = iv_bwt, GMM = gmm_bwt), -->
+<!--                            fmt = 4, statistic = 'statistic', coef_omit = "(Intercept)") -->
+<!-- } -->
+<!-- ``` -->
 
-
-```{r }
+```{r}
 sargan(gmm_bwt)
 ```

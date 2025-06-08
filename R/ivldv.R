@@ -37,11 +37,12 @@
 #' inst <- ~ sic3 + k_serv + inv + engsci + whitecol + skill + semskill + cropland + 
 #'     pasture + forest + coal + petro + minerals + scrconc + bcrconc + scrcomp +
 #'     bcrcomp + meps + kstock + puni + geog2 + tenure + klratio + bunion
-#' trade_protection <- dplyr::mutate(micsr::trade_protection,
-#'                                  y = ntb / (1 + ntb),
-#'                                  x1 = vshipped / imports / elast,
-#'                                  x2 = cap * x1,
-#'                                  x3 = labvar)
+#' trade_protection <- transform(trade_protection,
+#'                               y = ntb / (1 + ntb),
+#'                               x1 = vshipped / imports / elast)
+#' trade_protection <- transform(trade_protection,
+#'                               x2 = cap * x1,
+#'                               x3 = labvar)
 #' GH <- ivldv(Formula::as.Formula(y  ~  x1 + x2, inst), trade_protection,
 #'             method = "twosteps", model = "tobit") 
 #' Full <- ivldv(Formula::as.Formula(y ~ x1 + x2 + labvar, inst), trade_protection,
@@ -101,12 +102,12 @@ ivldv <- function(formula,
     y <- model.response(mf)
     q <- 2 * y - 1
     # model matrices
-    ZZ <- rm_intercept(model.matrix(Formula(formula), mf, rhs = 1))  # L covariates (X1 + Y)
-    X <- rm_intercept(model.matrix(Formula(formula), mf, rhs = 2))  # K exogenous variables (X1 + X2)
+    ZZ <- rm_intercept(model.matrix(Formula(formula), mf, rhs = 1))   # L covariates (X1 + Y)
+    X <- rm_intercept(model.matrix(Formula(formula), mf, rhs = 2))    # K exogenous variables (X1 + X2)
     names_X <- colnames(X)
     W <- ZZ[, setdiff(colnames(ZZ), colnames(X)), drop = FALSE]       # G endogenous variables (W)
     X1 <- ZZ[, intersect(colnames(ZZ), colnames(X)), drop = FALSE]    # K1 exogenous covariates (X1)
-    X2 <- X[, setdiff(colnames(X), colnames(X1)), drop = FALSE]    # K1 exogenous covariates (X1)
+    X2 <- X[, setdiff(colnames(X), colnames(X1)), drop = FALSE]       # K2 exogenous covariates (X1)
     ZZ <- cbind(X1, W)
     names_ZZ <- colnames(ZZ)
     if (has.int){
@@ -154,7 +155,7 @@ ivldv <- function(formula,
             UAX <- rbind(crossprod(U * a11, X), apply(X * a12, 2, sum))
         }
         if (model == "probit"){
-            dmls <- dmills(q * lp)
+            dmls <- mills(q * lp, 1)
             UAU <- crossprod(U * sqrt(- dmls))
             UAX <- crossprod(U * (- dmls), X)
         }
@@ -192,7 +193,7 @@ ivldv <- function(formula,
         if (model == "probit"){
             newey_2 <- glm(y ~ X + Wres, family = binomial(link = 'probit'))
             # this is not the default vcov computed by glm
-            vcov_step_2 <- solve(crossprod(sqrt(- dmills(q * drop(cbind(1, X, Yres) %*% coef(newey_2)))) * cbind(1, X, Yres)))
+            vcov_step_2 <- solve(crossprod(sqrt(- mills(q * drop(cbind(1, X, Yres) %*% coef(newey_2)), 1)) * cbind(1, X, Yres)))
         }
         if (model == "tobit"){
             newey_2 <- tobit1(y ~ X + Wres, left = left, right = right)
@@ -225,7 +226,7 @@ ivldv <- function(formula,
         names(.coef)[1] <- colnames(.vcov)[1] <- rownames(.vcov)[1] <- "(Intercept)"
     }
     if (.est_method == "ml"){
-        nms_param <- list(covar = names_X, ancil = names_ZZ, vcov = c("sigma", "rho"))
+        nms_param <- list(covar = names_X, instr = names_ZZ, vcov = c("sigma", "rho"))
         # computation of the starting values
         nu <- step_2$linear.predictor
         # Compute the covariance matrix of the SUR estimator and takes its Cholesky decomposition
@@ -255,7 +256,7 @@ ivldv <- function(formula,
             colnames(PI2) <- names_X
             nms_pi2 <- as.character(outer(colnames(PI2), rownames(PI2), paste, sep = "_"))
             nms_pi3 <- as.character(t(outer(rownames(PI2), colnames(PI2), paste, sep = "_")))
-            nms_pi2 <- paste("ancil", nms_pi3, sep = "_")
+            nms_pi2 <- paste("instr", nms_pi3, sep = "_")
         }
         else nms_pi2 <- paste(colnames(W), names(PI2), sep = "_")
         .start <- c(beta, rho, pi2, chol)
@@ -272,14 +273,19 @@ ivldv <- function(formula,
         ##     comp_grad
         ## }
             
-        func_obs <- function(param)    lnliv_ldv(param, X1 = X1, X2 = X2, W = W, y = y, sum = FALSE, gradient = FALSE, right = right, model = model)
-        func <- function(param)    -      lnliv_ldv(param, X1 = X1, X2 = X2, W = W, y = y, sum = TRUE, gradient = FALSE, right = right, model = model)
-        gr <- function(param)      - attr(lnliv_ldv(param, X1 = X1, X2 = X2, W = W, y = y, sum = TRUE, gradient = TRUE, right = right, model = model), "gradient")
-        grObs <- function(param)    attr(lnliv_ldv(param, X1 = X1, X2 = X2, W = W, y = y, sum = FALSE, gradient = TRUE, right = right, model = model), "gradient")
+        func_obs <- function(param)    lnliv_ldv(param, X1 = X1, X2 = X2, W = W, y = y, sum = FALSE, gradient = FALSE,
+                                                 opposite = FALSE, right = right, model = model)
+        func <- function(param)          lnliv_ldv(param, X1 = X1, X2 = X2, W = W, y = y, sum = TRUE, gradient = FALSE,
+                                                   opposite = TRUE, right = right, model = model)
+        gr <- function(param)      attr(lnliv_ldv(param, X1 = X1, X2 = X2, W = W, y = y, sum = TRUE, gradient = TRUE,
+                                                  opposite = TRUE, right = right, model = model), "gradient")
+        grObs <- function(param)   attr(lnliv_ldv(param, X1 = X1, X2 = X2, W = W, y = y, sum = FALSE, gradient = TRUE,
+                                                  opposite = FALSE, right = right, model = model), "gradient")
 
         trace <- 0
         .optim <- optim(.start, func, gr, method = "BFGS",
                         hessian = TRUE, control = list(trace = trace, maxit = 1E04))
+        
         .logLik <- structure(- .optim$value, nobs = length(y), df = length(.optim$par),
                              class = "logLik")
         .llcount <- func_obs(.optim$par)
@@ -303,7 +309,8 @@ ivldv <- function(formula,
     if (.est_method == "ml"){
         result$hessian <- - .optim$hessian
         result$gradient <- .gradient
-        result$value <- .logLik
+        result$logLik <- c(model = .logLik)
+        result$value <- .llcount
         .npar <- c(covariates = K1 + G + has.int,
                    resid = G,
                    instruments = (K1 + K2 + has.int) * G,
@@ -330,8 +337,13 @@ ivldv <- function(formula,
         .npar <- c(covariates = K1 + G + has.int)
     }
     result$npar <- .npar
+    result$na.action <- attr(mf, "na.action")
+    result$offset <- offset
+    result$contrasts <- attr(X, "contrasts")
+    result$xlevels <- .getXlevels(mt, mf)
     structure(result, class = c("ivldv", "micsr"))
 }
+
 #' @rdname ivldv
 #' @export
 endogtest <- function(x, ...) UseMethod("endogtest")
@@ -343,14 +355,14 @@ endogtest.formula <- function(x, ..., data, model = c("probit", "tobit")){
     cl <- match.call()
     cl[[1]] <- as.name("ivldv")
     names(cl)[2] <- "formula"
-    cl$compute_test <- TRUE
+    cl$method <- "test"
     eval(cl, parent.frame())
 }
 
 #' @rdname ivldv
 #' @export
 endogtest.ivldv <- function(x, ...){
-    update(x, compute_test = TRUE)
+    update(x, method = TRUE)
 }
 
 

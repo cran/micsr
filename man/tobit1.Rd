@@ -2,22 +2,31 @@
 % Please edit documentation in R/tobit1.R
 \name{tobit1}
 \alias{tobit1}
+\alias{fitted.tobit1}
 \title{Truncated response model}
 \usage{
 tobit1(
   formula,
   data,
-  subset = NULL,
-  weights = NULL,
+  subset,
+  weights,
+  na.action,
+  offset,
+  contrasts = NULL,
   start = NULL,
   left = 0,
   right = Inf,
   scedas = NULL,
   sample = c("censored", "truncated"),
-  method = c("ml", "lm", "twosteps", "trimmed", "nls", "minchisq", "test"),
-  trace = FALSE,
+  method = c("ml", "lm", "twostep", "trimmed", "nls", "minchisq", "test"),
+  opt = c("bfgs", "nr", "newton"),
+  maxit = 100,
+  trace = 0,
+  check_gradient = FALSE,
   ...
 )
+
+\method{fitted}{tobit1}(object, ...)
 }
 \arguments{
 \item{formula}{a symbolic description of the model; if two right
@@ -26,7 +35,7 @@ instruments if \code{scedas} is \code{NULL}, which is the
 default. Otherwise, the second part indicates the set of
 covariates for the variance function}
 
-\item{data, subset, weights}{see \code{lm}}
+\item{data, subset, weights, na.action, offset, contrasts}{see \code{lm}}
 
 \item{start}{an optional vector of starting values}
 
@@ -42,16 +51,25 @@ censored (tobit) regression model or \code{"truncated"} to estimated
 the truncated regression model}
 
 \item{method}{one of \code{"ml"} for maximum likelihood, \code{"lm"} for
-(biased) least squares estimators, \code{"twosteps"} for two-steps
+(biased) least squares estimators, \code{"twostep"} for two-steps
 consistent estimators, \code{"trimmed"} for symetrically censored
 estimator, \code{"minchisq"} and \code{"test"}. The last two are only
 relevant for instrumental variable estimation (when the formula
 is a two-parts formula and \code{scedas} is \code{NULL})}
 
-\item{trace}{a boolean (the default if \code{FALSE}) if \code{TRUE} some
-information about the optimization process is printed}
+\item{opt}{optimization method}
+
+\item{maxit}{maximum number of iterations}
+
+\item{trace}{printing of intermediate result}
+
+\item{check_gradient}{if \code{TRUE} the numeric gradient and hessian
+are computed and compared to the analytical gradient and
+hessian}
 
 \item{...}{further arguments}
+
+\item{object}{a \code{tobit1} object}
 }
 \value{
 An object of class \code{c("tobit1", "micsr")}, see

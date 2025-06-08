@@ -2,22 +2,24 @@
 % Please edit documentation in R/test.R
 \name{scoretest}
 \alias{scoretest}
+\alias{scoretest.default}
 \alias{scoretest.micsr}
 \title{Score test}
 \usage{
-scoretest(x, y, ...)
+scoretest(object, ...)
 
-\method{scoretest}{micsr}(x, y, ..., vcov = NULL)
+\method{scoretest}{default}(object, ...)
+
+\method{scoretest}{micsr}(object, ..., vcov = NULL)
 }
 \arguments{
-\item{x}{the first model,}
+\item{object}{the first model,}
 
-\item{y}{the second model}
+\item{...}{for the \code{micsr} method, it should be the formula for the
+"large" model or an object from which a formula can be
+extracted}
 
-\item{...}{further arguments}
-
-\item{vcov}{omit a character containing the effects that are
-removed from the test}
+\item{vcov}{an optional covariance matrix}
 }
 \value{
 an object of class \code{"htest"}.
@@ -26,9 +28,8 @@ an object of class \code{"htest"}.
 Score test, also knowned as Lagrange multiplier tests
 }
 \examples{
-mode_choice <- mode_choice \%>\%
-   mutate(cost = cost * 8.42,
-          gcost = (ivtime + ovtime) * 8 + cost)
+mode_choice <- transform(mode_choice, cost = cost * 8.42)
+mode_choice <- transform(mode_choice, gcost = (ivtime + ovtime) * 8 + cost)
 pbt_unconst <- binomreg(mode ~ cost + ivtime + ovtime, data = mode_choice, link = "probit")
 pbt_const <- binomreg(mode ~ gcost, data = mode_choice, link = "logit")
 scoretest(pbt_const , . ~ . + ivtime + ovtime)

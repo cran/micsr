@@ -5,11 +5,13 @@
 \alias{gaze.lm}
 \alias{gaze.micsr}
 \alias{gaze.ivreg}
+\alias{gaze.mlogit}
 \alias{gaze.rdrobust}
 \alias{gaze.CJMrddensity}
 \alias{gaze.htest}
 \alias{gaze.anova}
 \alias{gaze.LMtestlist}
+\alias{gaze.RStestlist}
 \title{Short print of the summary of an object}
 \usage{
 gaze(x, ...)
@@ -33,9 +35,17 @@ gaze(x, ...)
 \method{gaze}{ivreg}(
   x,
   ...,
-  coef,
+  coef = NULL,
   digits = max(3L, getOption("digits") - 3L),
-  signif.stars = getOption("show.signif.stars")
+  signif.stars = FALSE
+)
+
+\method{gaze}{mlogit}(
+  x,
+  ...,
+  coef = NULL,
+  digits = max(3L, getOption("digits") - 3L),
+  signif.stars = FALSE
 )
 
 \method{gaze}{rdrobust}(x, ..., first_stage = FALSE)
@@ -47,6 +57,8 @@ gaze(x, ...)
 \method{gaze}{anova}(x, ..., digits = 3)
 
 \method{gaze}{LMtestlist}(x, ..., digits = 3)
+
+\method{gaze}{RStestlist}(x, ..., digits = 3)
 }
 \arguments{
 \item{x}{an object,}
@@ -74,8 +86,8 @@ like a book or an article written using quarto. \code{gaze} is a generic
 function which prints a short output
 }
 \examples{
-t.test(extra ~ group, sleep) \%>\% gaze
-lm(dist ~ poly(speed, 2), cars) \%>\% gaze
-lm(dist ~ poly(speed, 2), cars) \%>\% gaze(coef = "poly(speed, 2)2")
+t.test(extra ~ group, sleep) |> gaze()
+lm(dist ~ poly(speed, 2), cars) |> gaze()
+lm(dist ~ poly(speed, 2), cars) |> gaze(coef = "poly(speed, 2)2")
 }
 \keyword{misc}

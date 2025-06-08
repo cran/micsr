@@ -1,7 +1,7 @@
 #' Endogenous switching and sample selection models for count data
 #'
 #' Heckman's like estimator for count data, using either
-#' maximum likelihood or a two-steps estimator
+#' maximum likelihood or a two-step estimator
 #' 
 #' @name escount
 #' @param formula a `Formula` object which includes two responses (the
@@ -15,7 +15,7 @@
 #'     otherwise the covariance matrix of the coefficients is computed
 #'     using the outer product of the gradient
 #' @param method one of `'ML'` for maximum likelihood estimation (the
-#'     default) or `'twosteps'` for the two-steps NLS method
+#'     default) or `'twostep'` for the two-step NLS method
 #' @param model one of `'es'` for endogenous switching (the default)
 #'     or `'ss'` for sample selection
 #' @return an object of class `c("escount,micsr)"`, see `micsr::micsr` for further details.
@@ -32,8 +32,8 @@
 #' @importFrom Rdpack reprompt
 #' @importFrom Formula Formula model.part
 #' @examples
-#' trips_2s <- escount(trips | car ~ workschl + size + dist + smsa + fulltime + distnod +
-#' realinc + weekend + car | . - car - weekend + adults, data = trips, method = "twosteps")
+#' trips_2s <- escount(trips + car ~ workschl + size + dist + smsa + fulltime + distnod +
+#' realinc + weekend + car | . - car - weekend + adults, data = trips, method = "twostep")
 #' trips_ml <- update(trips_2s, method = "ml")
 #' @export
 escount <- function(formula,
@@ -45,7 +45,7 @@ escount <- function(formula,
                     start = NULL,
                     R = 16,
                     hessian = FALSE,
-                    method = c("twosteps", "ml"),
+                    method = c("twostep", "ml"),
                     model = c("es", "ss")){
     start_provided <- ! is.null(start)
     model <- match.arg(model)
@@ -76,8 +76,10 @@ escount <- function(formula,
     names_X <- colnames(X)
     Z <- model.matrix(.formula, mf, rhs = 2)
     names_Z <- colnames(Z)
-    y <- model.part(.formula, mf, lhs = 1, drop = TRUE)
-    d <- model.part(.formula, mf, lhs = 2, drop = TRUE)
+    resps <- model.part(.formula, mf, lhs = 1)
+    if (length(resps) != 2) stop("two variable should be provided on the left-hand side of the formula")
+    y <- resps[[1]]
+    d <- resps[[2]]
     q <- 2 * d - 1
     N <- length(y)
     K <- ncol(X)
@@ -121,7 +123,9 @@ escount <- function(formula,
         # gauss-hermite quadratures
         lnl <- function(param, gradient = FALSE, sum = FALSE, R = 16){
 #            rn <- statmod::gauss.quad(R, kind = "hermite")
-            rn <- gaussian_quad(R, "hermite")
+#            rn <- gaussian_quad(R, "hermite")
+            rn <- gauss_hermite(R)
+#            names(rn) <- c("nodes", "weights")
             alpha <- param[1:L]
             beta <- param[L + c(1:K)]
             beta <- param[1:K]
@@ -200,11 +204,11 @@ escount <- function(formula,
         gr_obs <- function(param) attr(lnl(param, gradient = TRUE, sum = FALSE), "gradient")
         fn_obs <- function(param) lnl(param, gradient = FALSE, sum = FALSE)
 
-        # if starting values are not provided, use the 2-steps
+        # if starting values are not provided, use the 2-step
         # estimator
         if (! start_provided){
             .ncall <- .call
-            .ncall$method <- "twosteps"
+            .ncall$method <- "twostep"
             tsp <- eval(.ncall, parent.frame())
             .beta <- tsp$coefficients
             .beta <- .beta[- length(.beta)]
@@ -246,8 +250,12 @@ escount <- function(formula,
                        call = .call,
                        est_method = "ml"
                        )
+        result$na.action <- attr(mf, "na.action")
+        result$offset <- offset
+        result$contrasts <- attr(X, "contrasts")
+        result$xlevels <- .getXlevels(mt, mf)
     }
-    if (.est_method == "twosteps"){
+    if (.est_method == "twostep"){
         if (model == "ss"){
             oy <- y; oX <- X; oZ <- Z; oq <- q
             pos <- d > 0
@@ -282,6 +290,9 @@ escount <- function(formula,
         grad_ssr <- function(param) attr(ssr(param, gradient = TRUE), "gradient")
         # Compute the minimum
         names(.start) <- c(colnames(X), "theta")
+#    if (is.null(.npar) | is.null(attr(.npar, "default"))) idx <- 1:length(object$coefficients)
+#    else{
+
         conv_nls <- optim(.start, obj_ssr, grad_ssr, method = "BFGS", control = list(maxit = 1000))
         .value <- conv_nls$value
         # Compute the linear predictors for the fitted coefficients
@@ -310,8 +321,9 @@ escount <- function(formula,
         # objFun compute the log-likelihood function as a function of
         # sig only
 #        rn <- statmod::gauss.quad(R, kind = "hermite")
-        rn <- gaussian_quad(R, kind = "hermite")
-
+#        rn <- gaussian_quad(R, kind = "hermite")
+        rn <- gauss_hermite(R)
+#        names(rn) <- c("nodes", "weights")
         sig <- abs(2 * htheta)
         objFun <- function(sig){
             le <- function(eps) l(eps, sig)
@@ -359,13 +371,14 @@ escount <- function(formula,
                        model = mf,
                        terms = mt,
                        value = .value,
-                       npar = c(covariates = K, vcov = 1),
+                       npar = structure(c(covariates = K, vcov = 1),
+                                        default = c("covariates", "vcov")),
                        df.residual = N - ncol(X),
                        xlevels = .getXlevels(mt, mf),
                        na.action = attr(mf, "na.action"),
                        call = .call,
                        first = binom,
-                       est_method = "twosteps"
+                       est_method = "twostep"
                        )
     }
     result <- structure(result, class = c("escount", "micsr"))

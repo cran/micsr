@@ -2,6 +2,7 @@
 % Please edit documentation in R/ordreg.R
 \name{ordreg}
 \alias{ordreg}
+\alias{fitted.ordreg}
 \title{Ordered regression}
 \usage{
 ordreg(
@@ -11,24 +12,45 @@ ordreg(
   subset,
   na.action,
   offset,
-  link = c("probit", "logit"),
+  contrasts = NULL,
+  link = c("probit", "logit", "cloglog"),
   start = NULL,
+  opt = c("bfgs", "nr", "newton"),
+  maxit = 100,
+  trace = 0,
+  check_gradient = FALSE,
   ...
 )
+
+\method{fitted}{ordreg}(object, ..., type = c("outcome", "probabilities"))
 }
 \arguments{
 \item{formula}{a symbolic description of the model}
 
 \item{data}{a data frame}
 
-\item{subset, weights, na.action, offset}{see \code{lm}}
+\item{subset, weights, na.action, offset, contrasts}{see \code{lm}}
 
 \item{link}{one of \code{probit} and \code{logit}}
 
-\item{start}{a vector of starting values, in this case, no
-estimation}
+\item{start}{a vector of starting values,}
+
+\item{opt}{optimization method}
+
+\item{maxit}{maximum number of iterations}
+
+\item{trace}{printing of intermediate result}
+
+\item{check_gradient}{if \code{TRUE} the numeric gradient and hessian
+are computed and compared to the analytical gradient and
+hessian}
 
 \item{...}{further arguments}
+
+\item{object}{a \code{ordreg} object}
+
+\item{type}{one of \code{"outcome"} or \code{"probabilities"} for the
+\code{fitted} method}
 }
 \value{
 an object of class \code{micsr}, see \code{micsr::micsr} for further
@@ -40,5 +62,10 @@ ordinal
 }
 \examples{
 mod1 <- ordreg(factor(dindx) ~ rhs1 + catchup, fin_reform, link = "logit")
+library(survival)
+ud <- transform(unemp_duration, years = floor(duration / 365))
+ud <- transform(ud, years = ifelse(years == 6, 5, years))
+mod2 <- ordreg(Surv(years, censored == "no") ~ gender + age + log(1 + wage), ud,
+               link = "cloglog", opt = "bfgs")
 }
 \keyword{models}

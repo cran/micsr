@@ -5,64 +5,92 @@ head(Vuong)
 mean(Vuong)
 mean(abs(Vuong) > 1.96)
 
-## -----------------------------------------------------------------------------
-library("ggplot2")
-ggplot(data = data.frame(Vuong = Vuong)) + geom_density(aes(x = Vuong)) +
-    geom_function(fun = dnorm, linetype = "dotted")
 
 ## -----------------------------------------------------------------------------
-library("micsr")
+#| label: fig-vuong
+#| fig-cap: "Empirical distribution if the Vuong statistic"
+#| echo: false
+#| message: false
+if (requireNamespace("ggplot2")){
+    library(ggplot2)
+    ggplot(data = data.frame(Vuong = Vuong)) + geom_density(aes(x = Vuong)) +
+        geom_function(fun = dnorm, linetype = "dotted")
+}
+
+
+## -----------------------------------------------------------------------------
 test <- ndvuong(turnout$group, turnout$intens, size = 0.05, pval = FALSE)
 test
 
+
 ## -----------------------------------------------------------------------------
 ndvuong(turnout$group, turnout$intens, nd = FALSE)
+
 
 ## -----------------------------------------------------------------------------
 test <- ndvuong(turnout$group, turnout$intens, pval = TRUE)
 test
 
-## -----------------------------------------------------------------------------
-library("mlogit")
-data("ModeCanada")
-MC <- mlogit.data(ModeCanada, subset = noalt == 4, chid.var = "case",
-                  alt.var = "alt", drop.index = TRUE)
 
 ## -----------------------------------------------------------------------------
-ml <- mlogit(choice ~ freq + cost + ivt + ovt | urban + income, MC, 
-             reflevel = 'car', alt.subset = c("car", "train", "air"))
+#| message: false
+if (requireNamespace("mlogit")){
+    library(mlogit)
+    data("ModeCanada", package = "mlogit")
+    MC <- dfidx(ModeCanada, subset = noalt == 4)
+}
+
 
 ## -----------------------------------------------------------------------------
-hl <- mlogit(choice ~ freq + cost + ivt + ovt | urban + income, MC, 
-             reflevel = 'car', alt.subset = c("car", "train", "air"),
-             heterosc = TRUE)
-coef(summary(hl))
+if (requireNamespace("mlogit")){
+    ml <- mlogit(choice ~ freq + cost + ivt + ovt | urban + income, MC, 
+                 reflevel = 'car', alt.subset = c("car", "train", "air"))
+}
+
 
 ## -----------------------------------------------------------------------------
-lmtest::waldtest(hl, heterosc = FALSE)
-scoretest(ml, heterosc = TRUE)
-lmtest::lrtest(hl, ml)
+if (requireNamespace("mlogit")){
+    hl <- mlogit(choice ~ freq + cost + ivt + ovt | urban + income, MC, 
+                 reflevel = 'car', alt.subset = c("car", "train", "air"),
+                 heterosc = TRUE)
+    coef(summary(hl))
+}
+
+
+## -----------------------------------------------------------------------------
+if (requireNamespace("lmtest")){
+    lmtest::waldtest(hl, heterosc = FALSE)
+    scoretest(ml, heterosc = TRUE)
+    lmtest::lrtest(hl, ml)
+}
+
 
 ## -----------------------------------------------------------------------------
 ndvuong(hl, ml, nested = TRUE)
 
-## -----------------------------------------------------------------------------
-library("mlogit")
-data("RiskyTransport")
-RT <- mlogit.data(RiskyTransport, shape = "long", choice = "choice",
-                  chid.var = "chid", alt.var = "mode", id.var = "id")
 
 ## -----------------------------------------------------------------------------
-ml <- mlogit(choice ~ cost, data = RT)
-hl <- mlogit(choice ~ cost , data = RT, heterosc = TRUE)
-nl <- mlogit(formula = choice ~ cost, data = RT,
-             nests = list(fast = c("Helicopter", "Hovercraft"),
-                          slow = c("WaterTaxi", "Ferry")),
-             un.nest.el = TRUE)
-modelsummary::msummary(list(multinomial = ml, heteroscedastic = hl, nested =  nl))
+if (requireNamespace("mlogit")){
+    library(mlogit)
+    data("RiskyTransport", package = "mlogit")
+    RT <- dfidx(RiskyTransport, idx = c(id = "chid", "mode"), choice = "choice")
+}
+
+
+## -----------------------------------------------------------------------------
+if (requireNamespace("mlogit")){
+    ml <- mlogit(choice ~ cost, data = RT)
+    hl <- mlogit(choice ~ cost , data = RT, heterosc = TRUE)
+    nl <- mlogit(formula = choice ~ cost, data = RT,
+                 nests = list(fast = c("Helicopter", "Hovercraft"),
+                              slow = c("WaterTaxi", "Ferry")),
+                 un.nest.el = TRUE)
+}
+
 
 ## -----------------------------------------------------------------------------
 ndvuong(nl, hl, vartest = TRUE)
+
 
 ## -----------------------------------------------------------------------------
 ndvuong(hl, nl)

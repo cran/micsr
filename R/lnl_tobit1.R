@@ -1,4 +1,5 @@
-lnl_tp <- function(param, X, y, wt, Z = NULL, scedas = c("exp", "pnorm"), sum = TRUE, gradient = FALSE, hessian = FALSE, left = 0, right = Inf, sample = "censored"){
+lnl_tp <- function(param, X, y, wt, Z = NULL, scedas = c("exp", "pnorm"), sum = TRUE, gradient = FALSE,
+                   hessian = FALSE, left = 0, right = Inf, sample = "censored"){
 
     CENS <- sample == "censored"
     TRUNC <- ! CENS
@@ -87,14 +88,14 @@ lnl_tp <- function(param, X, y, wt, Z = NULL, scedas = c("exp", "pnorm"), sum = 
             }
         }
         if (heter){
-            grad <- wt * cbind((g_com_beta + g_spec_beta) * X,
-                               (g_com_sig  + g_spec_sig) * cbind(fh(gZ), sigo * gh(gZ) * Z)) / sig
+            grad <- cbind((g_com_beta + g_spec_beta) * X,
+            (g_com_sig  + g_spec_sig) * cbind(fh(gZ), sigo * gh(gZ) * Z)) / sig
         }
         else{
-            grad <- wt * cbind((g_com_beta + g_spec_beta) * X,
-                               (g_com_sig  + g_spec_sig) ) / sig
+            grad <- cbind((g_com_beta + g_spec_beta) * X,
+            (g_com_sig  + g_spec_sig) ) / sig
         }
-        if (sum) grad <- apply(grad, 2, sum)
+        if (sum) grad <- apply(wt * grad, 2, sum)
         attr(lnl, "gradient") <- grad
     }
     
@@ -115,39 +116,39 @@ lnl_tp <- function(param, X, y, wt, Z = NULL, scedas = c("exp", "pnorm"), sum = 
         if (CENS){
             h_spec_beta_beta <- h_spec_beta_sig <- h_spec_sig_sig <- 0
             if (LEFT | TWO){
-                h_spec_beta_beta <-  Ia * dmills(za)
-                h_spec_beta_sig <-    Ia * (mills(za) + dmills(za) * za)
-                h_spec_sig_sig <-  Ia * (za ^ 2 * dmills(za) + 2 * za * mills(za))
+                h_spec_beta_beta <-  Ia * mills(za, 1)
+                h_spec_beta_sig <-    Ia * (mills(za) + mills(za, 1) * za)
+                h_spec_sig_sig <-  Ia * (za ^ 2 * mills(za, 1) + 2 * za * mills(za))
             }
             if (RIGHT | TWO){
-                h_spec_beta_beta <- h_spec_beta_beta + Ib * dmills(-zb)
-                h_spec_beta_sig <-  h_spec_beta_sig  + Ib * ( - mills(-zb) + dmills(- zb) * zb)
-                h_spec_sig_sig <-   h_spec_sig_sig   + Ib * (zb ^ 2 * dmills(- zb) - 2 * zb * mills(- zb))
+                h_spec_beta_beta <- h_spec_beta_beta + Ib * mills(-zb, 1)
+                h_spec_beta_sig <-  h_spec_beta_sig  + Ib * ( - mills(-zb) + mills(- zb, 1) * zb)
+                h_spec_sig_sig <-   h_spec_sig_sig   + Ib * (zb ^ 2 * mills(- zb, 1) - 2 * zb * mills(- zb))
             }
         }
         if (TRUNC){
             if (LEFT){
-                h_spec_beta_beta <- - Io * dmills( - za)
-                h_spec_beta_sig <-    Io * (mills(- za) - za * dmills(- za))
-                h_spec_sig_sig <-     Io * (2 * mills(- za) * za - dmills(- za) * za ^ 2)
+                h_spec_beta_beta <- - Io *  mills( - za, 1)
+                h_spec_beta_sig <-    Io * (mills(- za) - za * mills(- za, 1))
+                h_spec_sig_sig <-     Io * (2 * mills(- za) * za - mills(- za, 1) * za ^ 2)
             }
             if (RIGHT){
-                h_spec_beta_beta <- - Io * dmills(zb)
-                h_spec_beta_sig <-    Io * (- mills(zb) - zb * dmills(zb))
-                h_spec_sig_sig <-     Io * (- 2 * mills(zb) * zb - dmills(zb) * zb ^ 2)
+                h_spec_beta_beta <- - Io * mills(zb, 1)
+                h_spec_beta_sig <-    Io * (- mills(zb) - zb * mills(zb, 1))
+                h_spec_sig_sig <-     Io * (- 2 * mills(zb) * zb - mills(zb, 1) * zb ^ 2)
             }
             if (TWO){
                 DELTA <- pnorm(zb) - pnorm(za)
                 A <- mills(zb) * pnorm(zb) - mills(za) * pnorm(za)
                 B <- mills(zb) * pnorm(zb) * zb - mills(za) * pnorm(za) * za
                 MILLS <- A / DELTA
-                A_sig <- - pnorm(zb) * (mills(zb) ^ 2 + dmills(zb)) * zb + pnorm(za) * (mills(za) ^ 2 + dmills(za)) * za
-                B_sig <- - pnorm(zb) * zb * (dmills(zb) * zb + mills(zb) ^ 2 * zb + mills(zb)) +
-                     pnorm(za) * za * (dmills(za) * za + mills(za) ^ 2 * za + mills(za))
+                A_sig <- - pnorm(zb) * (mills(zb) ^ 2 + mills(zb, 1)) * zb + pnorm(za) * (mills(za) ^ 2 + mills(za, 1)) * za
+                B_sig <- - pnorm(zb) * zb * (mills(zb, 1) * zb + mills(zb) ^ 2 * zb + mills(zb)) +
+                     pnorm(za) * za * (mills(za, 1) * za + mills(za) ^ 2 * za + mills(za))
                 D_sig <- - mills(zb) * pnorm(zb) * zb + mills(za) * pnorm(za) * za
                 g_spec_beta <- - Io * MILLS
                 g_spec_sig <- - Io * (mills(zb) * pnorm(zb) * zb - mills(za) * pnorm(za) * za) / Dphi
-                DD <-  (pnorm(zb) * (dmills(zb) + mills(zb) ^ 2) - pnorm(za) * (dmills(za) + mills(za) ^ 2)) / Dphi -
+                DD <-  (pnorm(zb) * (mills(zb, 1) + mills(zb) ^ 2) - pnorm(za) * (mills(za, 1) + mills(za) ^ 2)) / Dphi -
                     (mills(zb) * pnorm(zb) - mills(za) * pnorm(za)) ^ 2 / (pnorm(zb) - pnorm(za)) ^ 2
                 h_spec_beta_beta <- -Io * DD
                 h_spec_beta_sig <-   -Io * (MILLS - (A_sig - MILLS * D_sig) / DELTA)
@@ -252,9 +253,9 @@ lnl_tp_olsen <- function(param, X, y, wt, sum = TRUE, gradient = FALSE, hessian 
                 g_spec_sig <-  - Io * (mills(zb) * pnorm(zb) * right - mills(za) * pnorm(za) * left) / Dphi
             }
         }
-        grad <- wt * cbind((g_com_beta +  g_spec_beta) * X,
-                           g_com_sig + g_spec_sig)
-        if (sum) grad <- apply(grad, 2, sum)
+        grad <- cbind((g_com_beta +  g_spec_beta) * X,
+                      g_com_sig + g_spec_sig)
+        if (sum) grad <- apply(wt * grad, 2, sum)
         attr(lnl, "gradient") <- grad
     }
     
@@ -265,39 +266,39 @@ lnl_tp_olsen <- function(param, X, y, wt, sum = TRUE, gradient = FALSE, hessian 
         if (CENS){
             h_spec_beta_beta <- h_spec_beta_sig <- h_spec_sig_sig <- 0
             if (LEFT | TWO){
-                h_spec_beta_beta <-  Ia * dmills(za)
-                h_spec_beta_sig <-   - Ia * dmills(za) * left
-                h_spec_sig_sig <-  Ia * dmills(za) * left ^ 2
+                h_spec_beta_beta <-  Ia * mills(za, 1)
+                h_spec_beta_sig <-   - Ia * mills(za, 1) * left
+                h_spec_sig_sig <-  Ia * mills(za, 1) * left ^ 2
             }
             if (RIGHT | TWO){
-                h_spec_beta_beta <- h_spec_beta_beta + Ib * dmills(-zb)
-                h_spec_beta_sig <-  h_spec_beta_sig  - Ib * dmills(- zb) * right
-                h_spec_sig_sig <-   h_spec_sig_sig   + Ib * dmills(- zb) * right ^ 2
+                h_spec_beta_beta <- h_spec_beta_beta + Ib * mills(-zb, 1)
+                h_spec_beta_sig <-  h_spec_beta_sig  - Ib * mills(- zb, 1) * right
+                h_spec_sig_sig <-   h_spec_sig_sig   + Ib * mills(- zb, 1) * right ^ 2
             }
         }
         if (TRUNC){
             if (LEFT){
-                h_spec_beta_beta <- - Io * dmills( - za) 
-                h_spec_beta_sig <-    Io * left * dmills(- za)
-                h_spec_sig_sig <-   - Io * dmills(- za) * left ^ 2
+                h_spec_beta_beta <- - Io * mills(- za, 1) 
+                h_spec_beta_sig <-    Io * left * mills(- za, 1)
+                h_spec_sig_sig <-   - Io * mills(- za, 1) * left ^ 2
             }
             if (RIGHT){
-                h_spec_beta_beta <- - Io * dmills(zb)
-                h_spec_beta_sig <-    Io * dmills(zb) * right
-                h_spec_sig_sig <-   - Io * dmills(zb) * right ^ 2
+                h_spec_beta_beta <- - Io * mills(zb, 1)
+                h_spec_beta_sig <-    Io * mills(zb, 1) * right
+                h_spec_sig_sig <-   - Io * mills(zb, 1) * right ^ 2
             }
             if (TWO){
                 DELTA <- pnorm(zb) - pnorm(za)
                 A <- mills(zb) * pnorm(zb) - mills(za) * pnorm(za)
                 B <- mills(zb) * pnorm(zb) * right - mills(za) * pnorm(za) * left
                 MILLS <- A / DELTA
-                A_sig <- - pnorm(zb) * (mills(zb) ^ 2 + dmills(zb)) * zb + pnorm(za) * (mills(za) ^ 2 + dmills(za)) * za
-                B_sig <- - pnorm(zb) * zb * (dmills(zb) * zb + mills(zb) ^ 2 * zb + mills(zb)) +
-                     pnorm(za) * za * (dmills(za) * za + mills(za) ^ 2 * za + mills(za))
+                A_sig <- - pnorm(zb) * (mills(zb) ^ 2 + mills(zb, 1)) * zb + pnorm(za) * (mills(za) ^ 2 + mills(za, 1)) * za
+                B_sig <- - pnorm(zb) * zb * (mills(zb, 1) * zb + mills(zb) ^ 2 * zb + mills(zb)) +
+                     pnorm(za) * za * (mills(za, 1) * za + mills(za) ^ 2 * za + mills(za))
                 D_sig <- - mills(zb) * pnorm(zb) * zb + mills(za) * pnorm(za) * za
                 g_spec_beta <- - Io * MILLS
                 g_spec_sig <- - Io * (mills(zb) * pnorm(zb) * zb - mills(za) * pnorm(za) * za) / Dphi
-                DD <-  (pnorm(zb) * (dmills(zb) + mills(zb) ^ 2) - pnorm(za) * (dmills(za) + mills(za) ^ 2)) / Dphi -
+                DD <-  (pnorm(zb) * (mills(zb, 1) + mills(zb) ^ 2) - pnorm(za) * (mills(za, 1) + mills(za) ^ 2)) / Dphi -
                     (mills(zb) * pnorm(zb) - mills(za) * pnorm(za)) ^ 2 / (pnorm(zb) - pnorm(za)) ^ 2
                 h_spec_beta_beta <- Io * DD
                 h_spec_beta_sig <-   Io * (MILLS - (A_sig - MILLS * D_sig) / DELTA)

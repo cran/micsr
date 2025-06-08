@@ -10,7 +10,7 @@
 #'     instruments if `scedas` is `NULL`, which is the
 #'     default. Otherwise, the second part indicates the set of
 #'     covariates for the variance function
-#' @param data,subset,weights see `lm`
+#' @param data,subset,weights,na.action,offset,contrasts see `lm`
 #' @param start an optional vector of starting values
 #' @param left,right left and right truncation points for the response
 #'     The default is respectively 0 and +Inf which corresponds to the
@@ -21,15 +21,19 @@
 #'     censored (tobit) regression model or `"truncated"` to estimated
 #'     the truncated regression model
 #' @param method one of `"ml"` for maximum likelihood, `"lm"` for
-#'     (biased) least squares estimators, `"twosteps"` for two-steps
+#'     (biased) least squares estimators, `"twostep"` for two-steps
 #'     consistent estimators, `"trimmed"` for symetrically censored
 #'     estimator, `"minchisq"` and `"test"`. The last two are only
 #'     relevant for instrumental variable estimation (when the formula
 #'     is a two-parts formula and `scedas` is `NULL`)
-#' @param trace a boolean (the default if `FALSE`) if `TRUE` some
-#'     information about the optimization process is printed
+#' @param opt optimization method
+#' @param maxit maximum number of iterations
+#' @param trace printing of intermediate result
+#' @param check_gradient if `TRUE` the numeric gradient and hessian
+#'     are computed and compared to the analytical gradient and
+#'     hessian
+#' @param object a `tobit1` object
 #' @param ... further arguments
-#' @importFrom tibble tibble
 #' @importFrom stats binomial coef dnorm glm lm model.matrix
 #'     model.response pnorm sigma df.residual fitted logLik
 #'     model.frame printCoefmat residuals terms vcov nobs
@@ -48,17 +52,20 @@
 #' tr <- update(ml, sample = "truncated")
 #' nls <- update(tr, method = "nls")
 #' @export
-tobit1 <- function(formula, data, subset = NULL, weights = NULL,
+tobit1 <- function(formula, data, subset, weights, na.action, offset, contrasts = NULL,
                    start = NULL, left = 0, right = Inf,
                    scedas = NULL,
                    sample = c("censored", "truncated"),
-                   method = c("ml", "lm", "twosteps", "trimmed",
+                   method = c("ml", "lm", "twostep", "trimmed",
                               "nls", "minchisq", "test"),
-                   trace = FALSE,
+                   opt = c("bfgs", "nr", "newton"),                  
+                   maxit = 100, trace = 0,
+                   check_gradient = FALSE,
                    ...){
     .call <- match.call()
     .method <- match.arg(method)
     .sample <- match.arg(sample)
+    zerotrunc <- ifelse(left == 0 & is.infinite(right) & (right > 0), TRUE, FALSE)
     .scedas <- scedas
     if (! is.null(scedas)){
         if (! scedas %in% c("exp", "pnorm"))
@@ -69,43 +76,42 @@ tobit1 <- function(formula, data, subset = NULL, weights = NULL,
     .formula <- Formula(formula)
     if (length(.formula)[2] == 2 & is.null(.scedas)){
         mf$model <- "tobit"
-        if (! .method %in% c("twosteps", "minchisq", "ml", "test"))
-            stop("method should be one of twosteps, minchisq, ml and test")
+        if (! .method %in% c("twostep", "minchisq", "ml", "test"))
+            stop("method should be one of twostep, minchisq, ml and test")
         mf$method <- .method
         mf[[1L]] <- as.name("ivldv")#quote(micsr::ivldv())
         result <- eval(mf, parent.frame())
         result$call <- .call
         return(result)
     } else {
-        if (! .method %in% c("twosteps", "ml", "nls", "lm", "trimmed"))
-            stop("method should be one of twosteps, ml, nls and lm")
+        if (! .method %in% c("twostep", "ml", "nls", "lm", "trimmed"))
+            stop("method should be one of twostep, ml, nls and lm")
     }
 
     .formula <- mf$formula <- Formula(formula)
-    m <- match(c("formula", "data", "subset", "weights"),
+    m <- match(c("formula", "data", "subset", "weights", "na.action", "offset"),
                names(mf), 0L)
-    zerotrunc <- ifelse(left == 0 & is.infinite(right) & (right > 0), TRUE, FALSE)
     # construct the model frame and components
     mf <- mf[c(1L, m)]
-    mf[[1L]] <- as.name("model.frame")
+    mf[[1L]] <- quote(stats::model.frame)
     mf <- eval(mf, parent.frame())
     mt <- attr(mf, "terms")
     if (length(.formula)[2] > 1){
-        X <- model.matrix(.formula, mf, rhs = 1)
+        X <- model.matrix(.formula, mf, rhs = 1, contrasts.arg = contrasts)
         formh <- formula(.formula, rhs = 2)
         if (attr(terms(formh), "intercept") == 1L) formh <- update(formh, . ~ . - 1)
         Z <- model.matrix(formh, mf)
     }
     else{
-        X <- model.matrix(.formula, mf)
+        X <- model.matrix(.formula, mf, contrasts)
         Z <- NULL
     }
     K <- ncol(X)
     y <- model.response(mf)
     N <- length(y)
     wt <- model.weights(mf)
-    if (is.null(wt)) wt <- rep(1, N)
-    else wt <- wt / mean(wt)
+    if (is.null(wt)) wt <- rep(1, N) else wt <- wt #/ mean(wt)
+    .offset <- model.offset(mf)
     # identify the untruncated observations
     P <- as.numeric(y > left & y < right)
     Plog <- as.logical(P)
@@ -116,7 +122,7 @@ tobit1 <- function(formula, data, subset = NULL, weights = NULL,
     if (.sample == "censored" & ! is_cens_smpl)
         stop("the tobit model requires a censored sample")
 
-    if (.method != "twosteps" & is_cens_smpl & .sample == "truncated"){
+    if (.method != "twostep" & is_cens_smpl & .sample == "truncated"){
         X <- X[Plog, ]
         y <- y[Plog]
         wt <- wt[Plog]
@@ -144,6 +150,7 @@ tobit1 <- function(formula, data, subset = NULL, weights = NULL,
                        residuals = residuals(result),
                        df.residual = df.residual(result),
                        vcov = vcov(result),
+                       npar = structure(c(covariates = length(coefs)), default = "covariates"),
                        logLik = NA,
                        fomula = .formula,
                        model = model.frame(result),
@@ -153,7 +160,7 @@ tobit1 <- function(formula, data, subset = NULL, weights = NULL,
     }
 
     # Two-steps estimator a la Heckman
-    if (.method == "twosteps"){
+    if (.method == "twostep"){
         if (! is_cens_smpl)
             stop("2 steps estimator requires a censored sample")
         pbt <- glm(P ~ X - 1, family = binomial(link = 'probit'))
@@ -189,10 +196,11 @@ tobit1 <- function(formula, data, subset = NULL, weights = NULL,
                        formula = .formula,
                        vcov = V,
                        logLik = NA,
+                       npar = structure(c(covariates = length(coefs)), default = "covariates"),
                        model = model.frame(result),
                        terms = terms(model.frame(result)),
                        call = .call,
-                       est_method = "twosteps")
+                       est_method = "twostep")
     }
 
     # trimmed estimator
@@ -252,6 +260,7 @@ tobit1 <- function(formula, data, subset = NULL, weights = NULL,
                        df.residual = .df.residual,
                        formula = .formula,
                        vcov = vcov_trim(coefs),
+                       npar = structure(c(covariates = length(coefs)), default = "covariates"),
                        logLik = NA,
                        model = mf,
                        terms = NA,
@@ -270,11 +279,11 @@ tobit1 <- function(formula, data, subset = NULL, weights = NULL,
                 e <- as.numeric(y - X %*% beta - sigma * mills(X %*% beta / sigma))
                 bXs <- as.numeric(X %*% beta) / sigma
                 if (gradient | hessian){
-                    e_beta <- - (1 + dmills(bXs))
-                    e_sigma <- dmills(bXs) * bXs - mills(bXs)
-                    e_beta_beta <- - d2mills(bXs) / sigma
-                    e_beta_sigma <- d2mills(bXs) * bXs / sigma
-                    e_sigma_sigma <- - d2mills(bXs) * bXs ^ 2 / sigma
+                    e_beta <- - (1 + mills(bXs, 1))
+                    e_sigma <- mills(bXs, 1) * bXs - mills(bXs)
+                    e_beta_beta <- - mills(bXs, 2) / sigma
+                    e_beta_sigma <- mills(bXs, 2) * bXs / sigma
+                    e_sigma_sigma <- - mills(bXs, 2) * bXs ^ 2 / sigma
                     grad_beta <-  (- 2 * e * e_beta) * X
                     grad_sigma <- - 2 * e * e_sigma
                 }
@@ -316,6 +325,7 @@ tobit1 <- function(formula, data, subset = NULL, weights = NULL,
                        formula = .formula,
                        df.residual = length(y) - length(coefs),
                        vcov = .vcov,
+                       npar = structure(c(covariates = length(coefs)), default = "covariates"),
                        logLik = NA,
                        model = mf,
                        terms = .terms,
@@ -350,18 +360,25 @@ tobit1 <- function(formula, data, subset = NULL, weights = NULL,
                                left = left, right = right, sample = .sample)
             npar <- structure(c(covariates = ncol(X), scedas = ncol(Z) + 1), default = c("covariates"))
         }
-            
+
+        fun <- function(x) lnl_tp(x, X = X, y = y, wt = wt,
+                                  scedas = .scedas, Z = Z,
+                                  sum = TRUE, gradient = TRUE, hessian = TRUE,
+                                  left = left, right = right, sample = .sample)
+        if(check_gradient) z <- check_gradient(fun, coefs) else z <- NA
+
         .hessian <- attr(lnl_conv, "hessian")
         .info <- attr(lnl_conv, "info")
         .gradient <- attr(lnl_conv, "gradient")
         .logLik <- sum(as.numeric(lnl_conv))
         beta <- coefs[1:K]
         sigma <- coefs[K + 1]
-        linear.predictor <- as.numeric(X %*% beta)
-        h <- linear.predictor / sigma
+        .linpred <- as.numeric(X %*% beta)
+        h <- .linpred / sigma
         Ppos <- pnorm(h)
-        Epos <- linear.predictor + sigma * mills(h)
-        .fitted <- tibble::tibble(y = y, Ppos = Ppos, Epos = Epos, lp = linear.predictor)
+        Epos <- .linpred + sigma * mills(h)
+        .fitted <- data.frame(y = y, Ppos = Ppos, Epos = Epos, lp = .linpred)
+        class(.fitted) <- c("tbl_df", "tbl", "data.frame")
         .vcov <- solve(- .hessian)
         dimnames(.vcov) <- list(names(coefs), names(coefs))
         .terms <-  terms(mf)
@@ -391,34 +408,67 @@ tobit1 <- function(formula, data, subset = NULL, weights = NULL,
                     pr * alpha_conv * h_conv * yb
                 c(mu = .mu, sigma = .sig, lnl = .lnL)
             }
-            logLik_null <- coef0(y)[["lnl"]] * N
-            N0 <- sum(y == 0)
-            logLik_saturated <- - (N - N0) / 2 * log(2 * pi)
-            .logLik <- c(model = sum(as.numeric(lnl_conv)),
-                        saturated = logLik_saturated,
-                        null = logLik_null)
-        } else .logLik <- c(model = sum(as.numeric(lnl_conv)))
+            values <- cbind(model     = as.numeric(lnl_conv),
+                            saturated = (- 1 / 2 * log(2 * pi)) * (y > 0) + 0 * (y == 0),
+                            null      = coef0(y)["lnl"])
+            .logLik <- apply(values * wt, 2, sum)
+        } else {
+            values <- as.numeric(lnl_conv)
+            .logLik <- c(model = sum(as.numeric(lnl_conv)))
+        }
+
+        d <- ifelse(y > 0, 1, 0)
+
+        gres <- - (1 - d) * sigma * dnorm(h) / (1 - pnorm(h)) + d * (y - .linpred)
+        gres <- - (y == 0) * sigma * dnorm(h) / (1 - pnorm(h)) + (y > 0) * (y - .linpred)
+
+
+        env <- new.env(parent = .GlobalEnv)
+        .sigma <- coefs["sigma"]
+        assign(".sigma", .sigma, envir = env)
+        .variance <- function(mu) .sigma ^ 2 * (1 + mills(mu / .sigma, deriv = 1)) * pnorm(mu / .sigma)
+        .gres <- function(mu) - (y == 0) * .sigma * dnorm(mu / .sigma) / (1 - pnorm(mu / .sigma)) + (y > 0) * (y - mu)
+        environment(.variance) <- env
+        
+        .variance
+        .family <- structure(list(
+            link    = "identity",
+            linkfun = function(mu) mu,
+            linkinv = function(eta) eta,
+            mu.eta  = function(eta) 1,
+            variance = .variance),
+            class = "family")
         
         result <- list(coefficients = coefs,
-                       linear.predictor = linear.predictor,
-                       fitted.values = .fitted,
-                       residuals = y - .fitted$Epos,
-                       df.residual = length(y) - length(coefs),
-                       formula = .formula,
+                       model = mf,
+                       terms = mt,
+                       value = values,
+                       gradient = .gradient,
                        hessian = .hessian,
                        info = .info,
-                       vcov = .vcov,
-                       npar = npar,
-                       gradient = .gradient,
-                       value = as.numeric(lnl_conv),
+                       fitted.values = .fitted,
+                       linear.predictor = .linpred,
                        logLik = .logLik,
-                       model = mf,
-                       terms = .terms,
+#                       residuals = y - .fitted$Epos,
+                       df.residual = length(y) - length(coefs),
+                       npar = npar,
+                       est_method = "ml",
                        call = .call,
-                       xlevels = .getXlevels(mt, mf),
                        na.action = attr(mf, "na.action"),
-                       est_method = "ml"
-                       )
+                       weights = wt,
+                       offset = .offset,
+                       contrasts = attr(X, "contrasts"),
+                       xlevels = .getXlevels(mt, mf),
+                       check_gradient = z,
+                       family = .family,
+                       residuals = gres)
+#                       formula = .formula,
+#                       vcov = .vcov,
     }
     structure(result, class = c("tobit1", "micsr"))
 }
+
+
+#' @rdname tobit1
+#' @export
+fitted.tobit1 <- function(object, ...) object$fitted.values$Ppos * object$fitted.values$Ppos

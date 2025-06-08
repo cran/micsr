@@ -1,14 +1,11 @@
 ---
 title: "Estimating the Tobit-1 model with the charitable data set"
-header-includes:
-  - \usepackage{xcolor}
-output: 
-  rmarkdown::html_vignette
-toc: false
+date: today
+date-format: long
 bibliography: ../inst/REFERENCES.bib
 vignette: >
   %\VignetteIndexEntry{Estimating the Tobit-1 model with the charitable data set}
-  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEngine{quarto::pdf}
   %\VignetteEncoding{UTF-8}
 ---
 
@@ -16,18 +13,12 @@ We'll reproduce here some results obtained by @WILH:08 using a data
 set which deals with charitable giving. The `charitable` data set is shiped with
 the `micsr`.
 
-```{r setup, include = FALSE}
-knitr::opts_chunk$set(message = FALSE, warning = FALSE, out.width = "100%",
-                      fig.align = "center", cache = FALSE, echo = TRUE)
-options(knitr.table.format = "latex", knitr.booktabs = TRUE)
+```{r}
+library(micsr)
 ```
 
-```{r }
-library("micsr")
-```
-
-```{r }
-print(charitable, n = 5)
+```{r}
+head(charitable, 5)
 ```
 
 The response is called `donation`, it measures annual charitable
@@ -48,14 +39,15 @@ and for married couples (`married`).
 a small donation.
 
 
-```{r }
+```{r}
 charitable$logdon <- with(charitable, log(donation) - log(25))
 ```
 
 The tobit model can be estimated by maximum likelihood using
 `AER::tobit`, `censReg::censReg` or with the `tobit1` package. 
 
-```{r }
+```{r}
+#| message: false
 char_form <- logdon ~ log(donparents) + log(income) +
     education + religion + married + south
 if (requireNamespace("AER")){
@@ -69,7 +61,7 @@ if (requireNamespace("censReg")){
 ml <- tobit1(char_form, data = charitable)
 ```
 
-`tobit1` provide a rich set of estimation methods, especially the
+**tobit1** provides a rich set of estimation methods, especially the
 **SCLS** (symetrically censored least squares) estimator proposed by
 @POWE:86. We also, for pedagogical purposes, estimate the OLS
 estimator although it is known to be unconsistent.
@@ -80,22 +72,30 @@ scls <- update(ml, method = "trimmed")
 ols <- update(ml, method = "lm")
 ```
 
-The results of the three models are presented in table below
+<!-- The results of the three models are presented in @tbl-models -->
 
-```{r models, echo = FALSE}
-if (requireNamespace("modelsummary")){
-    modelsummary::msummary(list("OLS" = ols, "maximum likehihood" = ml, "SCLS" = scls),
-                           title = "Estimation of charitable giving models",
-                           label = "tab:models", single.row = TRUE, digits = 3)
-}
-```
+<!-- ```{r} -->
+<!-- #| label: tbl-models -->
+<!-- #| echo: false -->
+<!-- #| tbl-cap: "Estimation of charitable giving models" -->
+<!-- #| message: false -->
+<!-- if (requireNamespace("modelsummary")){ -->
+<!--     modelsummary::msummary(list("OLS" = ols, "maximum likehihood" = ml, "SCLS" = scls), -->
+<!--                            single.row = TRUE, digits = 3) -->
+<!-- } -->
+<!-- ``` -->
 
-The last two columns of the  match exactly the
-first two columns of [@WILH:08, table 3 page 577]. Note that the OLS
-estimators are all lower in absolute values than those of the two
-other estimators, which illustrate the fact that OLS estimators are
-biased toward zero when the response is censored. The maximum
-likelihood is consistent and asymtotically efficient if the
+<!-- The last two columns of the  match exactly the -->
+<!-- first two columns of [@WILH:08, table 3 page 577].  -->
+
+
+The results match exactly the first two columns of [@WILH:08, table 3
+page 577].
+
+Note that the OLS estimators are all lower in absolute values than
+those of the two other estimators, which illustrate the fact that OLS
+estimators are biased toward zero when the response is censored. The
+maximum likelihood is consistent and asymtotically efficient if the
 conditional distribution of $y^*$ (the latent variable) is
 homoscedastic and normal.
 
@@ -105,11 +105,12 @@ using conditional moments tests. This can easily be done using the
 either `AER::tobit`, `censReg::censReg` or `tobit1::tobit1`:
 
 
-```{r }
+```{r}
 cmtest(ml)
 ```
 
-```{r include = FALSE}
+```{r}
+#| include: false
 cmtest(ml_aer)
 cmtest(ml_creg)
 ```
@@ -117,7 +118,7 @@ cmtest(ml_creg)
 `cmtest` has a `test` argument with default value equal to
 `normality`. To get a heteroscedasticity test, we would use:
 
-```{r }
+```{r}
 cmtest(ml, test = "heterosc")
 ```
 Normality and heteroscedasticity are strongly rejected. The values are
@@ -125,7 +126,7 @@ different from @WILH:08 as he used the "outer product of the gradient"
 form of the test. These versions of the test can be obtained by
 setting the `OPG` argument to `TRUE`.
 
-```{r }
+```{r}
 cmtest(ml, test = "normality", opg = TRUE)
 cmtest(ml, test = "heterosc", opg = TRUE)
 ```
@@ -134,7 +135,7 @@ Non-normality can be further investigate by testing separately
 the fact that the skewness and kurtosis indicators are respectively
 different from 0 and 3.
 
-```{r }
+```{r}
 cmtest(ml, test = "skewness")
 cmtest(ml, test = "kurtosis")
 ```
@@ -144,22 +145,27 @@ mesokurtic is not rejected at the 1% level and the main problem seems
 to be the asymetry of the distribution, even after taking the
 logarithm of the response. 
 
-This can be illustrated by plotting the
+This can be illustrated (see @fig-histnorm) by plotting the
 (unconditional) distribution of the response (for positive values) and
 adding to the histogram the normal density curve.
 
 
-```{r histnorm, fig.cap = "Empirical distribution of the response and normal approximation", echo = FALSE}
-library("ggplot2")
-library("dplyr")
-moments <- charitable %>% filter(logdon > 0) %>%
-    summarise(mu = mean(logdon), sigma = sd(logdon))
-ggplot(filter(charitable, logdon > 0), aes(logdon)) +
-    geom_histogram(aes(y = ..density..), color = "black",
-                   fill = "white", bins = 10) +
-    geom_function(fun = dnorm, args = list(mean = moments$mu,
-                                           sd = moments$sigma)) +
-    labs(x = "log of charitable giving", y = NULL)
+```{r}
+#| label: fig-histnorm
+#| fig-cap: "Empirical distribution of the response and normal approximation"
+#| echo: false
+#| message: false
+if (requireNamespace("ggplot2")){
+    library(ggplot2)
+    mu <- mean(subset(charitable, logdon > 0)$logdon)
+    std <- sd(subset(charitable, logdon > 0)$logdon)
+    ggplot(subset(charitable, logdon > 0), aes(logdon)) +
+        geom_histogram(aes(y = after_stat(density)), color = "black",
+                       fill = "white", bins = 10) +
+        geom_function(fun = dnorm, args = list(mean = mu,
+                                               sd = std)) +
+        labs(x = "log of charitable giving", y = NULL)
+}
 ```
 
 # References

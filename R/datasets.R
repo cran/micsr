@@ -331,3 +331,74 @@ NULL
 #' \insertRef{IVAL:LADO:OSSA:SIMI:96}{micsr}
 #' @importFrom Rdpack reprompt
 NULL
+
+
+#' Unemployment Duration in Germany
+#' @name unemp_duration
+#' @docType data
+#' @keywords dataset
+#' @description  a cross-section of 21685 individuals from 1996 to 1997 
+#' @format a tibble containing:
+#' - duration: the duration of the unemployment spell in days
+#' - censored: a factor with levels \code{yes} if the spell is censored, \code{no} otherwise
+#' - gender: a factor with levels \code{male} and \code{female}
+#' - age: the age
+#' - wage: the last daily wage before unemployment
+#' @source The Royal Statistical Society Datasets Website
+#' @references
+#' \insertRef{WICH:WILK:08}{micsr}
+#' @importFrom Rdpack reprompt
+NULL
+
+#' recall
+#' @name recall
+#' @docType data
+#' @keywords dataset
+#' @description  a cross-section of 1045 spell of unemployment from 1980 
+#' @format a tibble containing:
+#' - id: individual id
+#' - spell: spell id
+#' - end: the situation at the end of the observation of the spell; a factor with levels `"new-job"`, `"recall"` or `"censored"`
+#' - duration: duration of unemployment spell
+#' - age: age the year before the spell
+#' - sex: a factor with levels `"male"` and `"female"`
+#' - educ: years of schooling
+#' - race: a factor with levels `"white"` and `"nonwhite"`
+#' - nb: number of dependents
+#' - ui: a factor indicating unemployment insurance during the spell
+#' - marital: marital status, a factor with levels `"single"` and `"married"`
+#' - unemp: county unemployment rate (interval midpoints for 1980 spells)
+#' - wifemp: wife's employment status, a factor with levels `"no"` and `"yes"`,
+#' - homeowner: home owner, a factor with levels `"no"` and `"yes"`,
+#' - occupation: a factor with 5 levels
+#' - industry: a factor with 9 levels
+#' @source Journal of Applied Econometrics Data Archive : \url{http://qed.econ.queensu.ca/jae/}
+#' @references
+#' \insertRef{SUEY:95}{micsr}
+#' @importFrom Rdpack reprompt
+NULL
+
+
+#' Random control group
+#' @name random_group
+#' @docType data
+#' @keywords dataset
+#' @description  a cross-section of 2166 individuals from 2001 
+#' @format a tibble containing:
+#' - female: 1 for females
+#' - age: age
+#' - child: children
+#' - migrant: non-dutch
+#' - single: 1 for singles
+#' - temp: one for temporary job
+#' - ten: firm tenure (months)
+#' - edu: education, one of `"Low"`, `"Intermediate"` and `"High"`
+#' - fsize: firm size, one of `"up to 50"`, `"50 to 200"` and `"more than 200"`
+#' - samplew: sample weights
+#' - lnwh: log of hearly wage
+#' - group: group indicator, from -2 to 3
+#' @source Journal of Applied Econometrics Data Archive : \url{http://qed.econ.queensu.ca/jae/}
+#' @references
+#' \insertRef{LEUV:OOST:08}{micsr}
+#' @importFrom Rdpack reprompt
+NULL

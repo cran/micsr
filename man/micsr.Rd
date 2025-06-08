@@ -24,15 +24,32 @@
 \alias{llobs.mlogit}
 \alias{tidy.micsr}
 \alias{glance.micsr}
+\alias{residuals.micsr}
 \title{\code{micsr} class}
 \usage{
 llobs(x, ...)
 
-\method{coef}{micsr}(object, ..., subset = NA)
+\method{coef}{micsr}(object, ..., subset = NA, fixed = FALSE, grep = NULL, invert = TRUE)
 
-\method{vcov}{micsr}(object, ..., vcov = c("info", "hessian", "opg"), subset = NA)
+\method{vcov}{micsr}(
+  object,
+  ...,
+  vcov = NULL,
+  subset = NA,
+  fixed = FALSE,
+  grep = NULL,
+  invert = TRUE
+)
 
-\method{summary}{micsr}(object, ..., vcov = c("hessian", "info", "opg"), subset = NA)
+\method{summary}{micsr}(
+  object,
+  ...,
+  vcov = c("hessian", "info", "opg"),
+  subset = NA,
+  fixed = FALSE,
+  grep = NULL,
+  invert = TRUE
+)
 
 \method{coef}{summary.micsr}(object, ...)
 
@@ -45,7 +62,7 @@ llobs(x, ...)
   ...
 )
 
-\method{logLik}{micsr}(object, ..., type = c("model", "null", "saturated"))
+\method{logLik}{micsr}(object, ..., type = c("model", "null", "saturated"), sum = TRUE)
 
 \method{BIC}{micsr}(object, ..., type = c("model", "null"))
 
@@ -74,19 +91,15 @@ llobs(x, ...)
 \method{tidy}{micsr}(x, conf.int = FALSE, conf.level = 0.95, ...)
 
 \method{glance}{micsr}(x, ...)
+
+\method{residuals}{micsr}(object, ..., type = c("deviance", "pearson", "response"))
 }
 \arguments{
 \item{x, object}{an object which inherits the \code{micsr} class}
 
 \item{...}{further arguments}
 
-\item{subset}{a character which indicates which subset of
-coefficients should be extracted: one of \code{noinst} (all the
-coefficients except those corresponding to instrumental
-variables), \code{all}, \code{covar} (only the coefficients of the
-covariates), \code{inst} (only the coefficients of the instrumental
-variables) and \code{misc} (ony the "miscelanous" coefficients,
-typicaly a standard deviation or a coefficient of correlation)}
+\item{subset, grep, fixed, invert}{invert see `micsr::select_coef}
 
 \item{vcov}{the method used to compute the covariance matrix of the
 estimators (only for the ML estimator), one of \code{hessian} (the
@@ -97,6 +110,9 @@ outer product of the gradient)}
 \item{digits, width}{see \code{print}}
 
 \item{type, omega, sandwich}{see \code{sandwich::sandwich}}
+
+\item{sum}{return either the sum of the contributions or the vector
+of contribution}
 
 \item{k}{see \code{AIC}}
 
