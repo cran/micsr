@@ -54,6 +54,7 @@ d2mills <- function(x) mills(x) * ( (x + mills(x)) * (x + 2 * mills(x)) - 1)
 #'     function.
 #' @export
 newton <- function(fun, coefs, trace = 0, direction = c("min", "max"), tol = sqrt(.Machine$double.eps), maxit = 500, ...){
+    if (maxit == 0) return(coefs)
     if (trace){
         cat("Initial values of the coefficients:\n")
     }
@@ -120,8 +121,9 @@ stder.default <- function(x, vcov = NULL, subset = NA, fixed = FALSE, grep = NUL
             if (is.function(.vcov)){
                 std <- sqrt(diag(.vcov(x, ...)))
             }
+        } else {
+            std <- sqrt(diag(vcov(x, subset = subset, fixed = fixed, grep = grep, invert = invert)))
         }
-        else  std <- sqrt(diag(vcov(x)))
     }
     std
 }
@@ -205,7 +207,6 @@ npar.micsr <- function(x, subset = NULL){
     }
     sum(as.numeric(result))
 }
-
 
 compute_rank <- function(x){
     abs_eigen_value <- abs(eigen(crossprod(x), only.values = TRUE)$values)
@@ -306,10 +307,14 @@ quad_form <- function(x, m = NULL, inv = TRUE, subset = NULL, vcov = NULL, ...){
 #' @param grep a regular expression
 #' @param invert should the coefficients that **don't** match the
 #'     pattern should be selected ?
+#' @param coef a vector of coefficients
 #' @return a numeric vector
 #' @export
-select_coef <- function(object, subset = NA, fixed = FALSE, grep = NULL, invert = FALSE){   
+select_coef <- function(object, subset = NA, fixed = FALSE,
+                        grep = NULL, invert = FALSE, coef = NULL){
+    # ajouter subset = NULL de manière à ce que tous les coefficients soient sélectionnés
     .grep <- grep
+    .coef <- coef
     .npar <- object$npar
     .names <- names(object$coefficients)
     .fixed <- attr(object$coefficients, "fixed")
@@ -318,6 +323,9 @@ select_coef <- function(object, subset = NA, fixed = FALSE, grep = NULL, invert 
         .npar <- structure(c(covariates = length(object$coefficients)),
                            default = "covariates")
     }
+
+    # subset
+    if (is.null(subset)) .subset <- names(.npar)
     if (length(subset) == 1){
         if (is.na(subset)) .subset = attr(.npar, "default")
         else{
@@ -339,10 +347,25 @@ select_coef <- function(object, subset = NA, fixed = FALSE, grep = NULL, invert 
     if (! fixed) idx <- subset(idx, ! fixed)
     idx <- idx$idx
     names(idx) <- .names[idx]
-    if (! is.null(.grep)){
-        z <- grep(.grep, names(idx), invert = invert)
+
+    # coef
+    if (! is.null(.coef) | ! is.null(.grep)){
+        z1 <- z2 <- numeric(0)
+        if (! is.null(.coef)){
+            if (! any(.coef %in% names(idx))) stop("unknown coefficient")
+            z1 <- match(.coef, names(idx))
+        }
+        if (! is.null(.grep)){
+            z2 <- grep(.grep, names(idx), invert = invert)
+        }
+        z <- unique(c(z1, z2))
         idx <- idx[z]
     }
     idx
 }
+
+
+# coef:          un vecteur de coefficients
+# subset:        un vecteur de noms de sous-ensembles de coefficients
+# grep / invert: une expression rationelle et un booleun pour inverser
 

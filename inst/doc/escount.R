@@ -4,9 +4,10 @@ library(micsr)
 
 ## -----------------------------------------------------------------------------
 #| warning: false
-trips_2s <- escount(trips + car ~ workschl + size + dist + smsa + fulltime +
-                        distnod + realinc + weekend + car | . - car -
-                        weekend + adults, data = trips)
+trips_2s <- escount(trips + car ~ workschl + size + dist + smsa +
+                        fulltime + distnod + realinc + weekend +
+                        car | . - car - weekend + adults,
+                    data = trips)
 names(trips_2s)
 
 

@@ -31,7 +31,19 @@ ols <- update(ml, method = "lm")
 
 
 ## -----------------------------------------------------------------------------
-cmtest(ml)
+#| label: tbl-models
+#| echo: false
+#| tbl-cap: "Estimation of charitable giving models"
+#| message: false
+if (requireNamespace("modelsummary")){
+    modelsummary::msummary(list("OLS" = ols, "maximum likehihood" = ml, "SCLS" = scls),
+                           single.row = TRUE, digits = 3)
+}
+
+
+## -----------------------------------------------------------------------------
+#| collapse: true
+cmtest(ml) |> gaze()
 
 
 ## -----------------------------------------------------------------------------
@@ -41,17 +53,20 @@ cmtest(ml_creg)
 
 
 ## -----------------------------------------------------------------------------
-cmtest(ml, test = "heterosc")
+#| collapse: true
+cmtest(ml, test = "heterosc") |> gaze()
 
 
 ## -----------------------------------------------------------------------------
-cmtest(ml, test = "normality", opg = TRUE)
-cmtest(ml, test = "heterosc", opg = TRUE)
+#| collapse: true
+cmtest(ml, test = "normality", opg = TRUE) |> gaze()
+cmtest(ml, test = "heterosc", opg = TRUE) |> gaze()
 
 
 ## -----------------------------------------------------------------------------
-cmtest(ml, test = "skewness")
-cmtest(ml, test = "kurtosis")
+#| collapse: true
+cmtest(ml, test = "skewness") |> gaze()
+cmtest(ml, test = "kurtosis") |> gaze()
 
 
 ## -----------------------------------------------------------------------------

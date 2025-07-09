@@ -11,14 +11,15 @@ pois_cig <- glm(cigarettes ~ habit + price + restaurant + income + age +
 
 
 ## -----------------------------------------------------------------------------
-iv_cig <- expreg(cigarettes ~ habit + price + restaurant + income + age + age2 +
-                       educ + educ2 + famsize + race | . - habit + age3 + educ3 +
-                       educage + lagprice + reslgth, data = cigmales,
-                   method = "iv")
+iv_cig <- expreg(cigarettes ~ habit + price + restaurant + income +
+                     age + age2 + educ + educ2 + famsize + race |
+                     . - habit + age3 + educ3 + educage + lagprice +
+                     reslgth, data = cigmales, method = "iv")
 gmm_cig <- update(iv_cig, method = "gmm")
 
 
 ## -----------------------------------------------------------------------------
+#| collapse: true
 sargan(iv_cig) |> gaze()
 sargan(gmm_cig) |> gaze()
 
@@ -33,5 +34,6 @@ gmm_bwt <- update(iv_bwt, method = "gmm")
 
 
 ## -----------------------------------------------------------------------------
-sargan(gmm_bwt)
+#| collapse: true
+sargan(gmm_bwt) |> gaze()
 

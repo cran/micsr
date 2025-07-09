@@ -4,7 +4,14 @@
 \alias{select_coef}
 \title{select a subset of coefficients}
 \usage{
-select_coef(object, subset = NA, fixed = FALSE, grep = NULL, invert = FALSE)
+select_coef(
+  object,
+  subset = NA,
+  fixed = FALSE,
+  grep = NULL,
+  invert = FALSE,
+  coef = NULL
+)
 }
 \arguments{
 \item{object}{a fitted model}
@@ -17,6 +24,8 @@ select_coef(object, subset = NA, fixed = FALSE, grep = NULL, invert = FALSE)
 
 \item{invert}{should the coefficients that \strong{don't} match the
 pattern should be selected ?}
+
+\item{coef}{a vector of coefficients}
 }
 \value{
 a numeric vector

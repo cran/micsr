@@ -26,7 +26,7 @@ vcov(bank_msq, subset = c("resid"))
 
 ## -----------------------------------------------------------------------------
 #| collapse: true
-vcov(bank_msq, subset = c("all"), grep = "Intercept")
+vcov(bank_msq, subset = "all", grep = "Intercept")
 
 
 ## -----------------------------------------------------------------------------

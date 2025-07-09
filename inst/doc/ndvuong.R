@@ -1,4 +1,5 @@
 ## -----------------------------------------------------------------------------
+#| collapse: true
 library(micsr)
 Vuong <- vuong_sim(N = 100, R = 1000, Kf = 15, Kg = 1, a = 0.5)
 head(Vuong)
@@ -24,7 +25,8 @@ test
 
 
 ## -----------------------------------------------------------------------------
-ndvuong(turnout$group, turnout$intens, nd = FALSE)
+#| collapse: true
+ndvuong(turnout$group, turnout$intens, nd = FALSE) |> gaze()
 
 
 ## -----------------------------------------------------------------------------
@@ -59,9 +61,9 @@ if (requireNamespace("mlogit")){
 
 ## -----------------------------------------------------------------------------
 if (requireNamespace("lmtest")){
-    lmtest::waldtest(hl, heterosc = FALSE)
-    scoretest(ml, heterosc = TRUE)
-    lmtest::lrtest(hl, ml)
+    lmtest::waldtest(hl, heterosc = FALSE) |> gaze()
+    scoretest(ml, heterosc = TRUE) |> gaze()
+    lmtest::lrtest(hl, ml) |> gaze()
 }
 
 
@@ -73,7 +75,8 @@ ndvuong(hl, ml, nested = TRUE)
 if (requireNamespace("mlogit")){
     library(mlogit)
     data("RiskyTransport", package = "mlogit")
-    RT <- dfidx(RiskyTransport, idx = c(id = "chid", "mode"), choice = "choice")
+    RT <- dfidx(RiskyTransport, idx = c(id = "chid", "mode"),
+                choice = "choice")
 }
 
 
@@ -85,13 +88,19 @@ if (requireNamespace("mlogit")){
                  nests = list(fast = c("Helicopter", "Hovercraft"),
                               slow = c("WaterTaxi", "Ferry")),
                  un.nest.el = TRUE)
+    xl <- mlogit(choice ~ cost, data = RT, rpar = c(cost = "zbt"))
 }
 
 
 ## -----------------------------------------------------------------------------
-ndvuong(nl, hl, vartest = TRUE)
+#| collapse: true
+ndvuong(nl, hl, vartest = TRUE) |> gaze()
 
 
 ## -----------------------------------------------------------------------------
 ndvuong(hl, nl)
+
+
+## -----------------------------------------------------------------------------
+ndvuong(xl, ml)
 

@@ -1,3 +1,10 @@
+# micsr 0.1-3
+
+* the `gaze.lm` method now interface the `select_coef` function
+
+* new `predict` and `effects` methods to get the predictions and the
+  slopes along with their standard errors
+
 # micsr 0.1-2
 
 * dependences on part of the `tidyverse` and on `knitr` are removed

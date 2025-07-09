@@ -1,8 +1,8 @@
 ## -----------------------------------------------------------------------------
-#| echo: false
+#| echo: true
 #| message: false
 library(micsr)
-random_group <- transform(random_group, wage = exp(lnwh))
+random_group |> head()
 
 
 ## -----------------------------------------------------------------------------

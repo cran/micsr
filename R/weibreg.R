@@ -95,6 +95,7 @@ weibreg <- function(formula, data, weights, subset, na.action, offset, contrasts
     } else z <- NA
 
     .linpred <- drop(X %*% coefs[1:ncol(X)])
+    .fitted <- exp(.linpred + lgamma(1 + 1 / coefs["shape"]))
     result <- list(coefficients = coefs,
                    model = mf,
                    terms = mt,
@@ -103,6 +104,7 @@ weibreg <- function(formula, data, weights, subset, na.action, offset, contrasts
                    hessian = attr(lnl_conv, "hessian"),
                    info = attr(lnl_conv, "info"),
                    linear.predictor = .linpred,
+                   fitted.values = .fitted,
                    logLik = c(model = sum(as.numeric(lnl_conv))),#, null = lnl_null),
                    npar = structure(c(covariates = ncol(X), vcov = ifelse(mixing, 2, 1)),
                                     default = c("covariates", "vcov")),

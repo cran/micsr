@@ -64,6 +64,7 @@ ordreg <- function(formula, data, weights, subset, na.action, offset, contrasts 
         e <- rep(1, length(y))
         if (! inherits(y, "factor")) y <- as.factor(y)
     }
+
     X <- model.matrix(mt, mf, contrasts)
     if (colnames(X)[1] == "(Intercept)") X <- X[, - 1, drop = FALSE]
     if (compute_rank(X) < ncol(X)){
@@ -80,6 +81,7 @@ ordreg <- function(formula, data, weights, subset, na.action, offset, contrasts 
     N <- length(y)
     # the observations for the last class should be coded as
     # uncensored
+
     e[y == J] <- TRUE
     .df.residual <- N - K
     if (.link == "probit"){
