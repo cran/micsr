@@ -1,3 +1,16 @@
+# micsr 0.1-4
+
+* the modelsummary tables are removed because they don't pass cran's
+  cheks
+
+* in scoretest, `quad_form` is now used to compute the statistics
+
+* in vcov.micsr, info is now the default if it is available
+
+* duplicate subset in `quad_form`
+
+* new vignette "Miscellanous tools"
+
 # micsr 0.1-3
 
 * the `gaze.lm` method now interface the `select_coef` function

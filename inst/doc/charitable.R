@@ -35,10 +35,12 @@ ols <- update(ml, method = "lm")
 #| echo: false
 #| tbl-cap: "Estimation of charitable giving models"
 #| message: false
-if (requireNamespace("modelsummary")){
-    modelsummary::msummary(list("OLS" = ols, "maximum likehihood" = ml, "SCLS" = scls),
-                           single.row = TRUE, digits = 3)
-}
+#| eval: false
+#| include: false
+# if (requireNamespace("modelsummary")){
+#     modelsummary::msummary(list("OLS" = ols, "maximum likehihood" = ml, "SCLS" = scls),
+#                            single.row = TRUE, digits = 3)
+# }
 
 
 ## -----------------------------------------------------------------------------
