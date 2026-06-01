@@ -1,3 +1,7 @@
+# micsr 0.1-5
+
+* class `clm` is renamed in `cstclm`
+
 # micsr 0.1-4
 
 * the modelsummary tables are removed because they don't pass cran's

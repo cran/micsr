@@ -1,6 +1,6 @@
 Package: micsr
-Version: 0.1-4
-Date: 2025-10-27
+Version: 0.1-5
+Date: 2026-06-01
 Title: Microeconometrics with R
 Authors@R: person("Yves",
                   "Croissant",
@@ -19,12 +19,12 @@ License: GPL (>= 2)
 URL: https://www.r-project.org
 VignetteBuilder: quarto
 NeedsCompilation: yes
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.3
 LazyData: true
 RdMacros: Rdpack
-Packaged: 2025-10-27 09:02:50 UTC; yves
+Packaged: 2026-06-01 17:15:23 UTC; yves
 Author: Yves Croissant [aut, cre] (ORCID:
     <https://orcid.org/0000-0002-4857-7736>)
 Maintainer: Yves Croissant <yves.croissant@univ-reunion.fr>
 Repository: CRAN
-Date/Publication: 2025-10-27 09:30:02 UTC
+Date/Publication: 2026-06-01 18:20:09 UTC
